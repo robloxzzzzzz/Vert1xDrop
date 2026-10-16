@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#050505" />
+  <title>Vert1x Drop — Steal a Vert1x</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { void:'#050505', graphite:'#121212', neon:'#38BDF8', emerald:'#3B82F6', acid:'#60A5FA', muted:'#A1A1AA' },
+        fontFamily: { orbitron:['Orbitron','sans-serif'], chakra:['Chakra Petch','sans-serif'], inter:['Inter','sans-serif'] },
+        boxShadow: { neon:'0 0 15px rgba(56,189,248,.45)', emerald:'0 0 28px rgba(59,130,246,.2)' }
+      }}
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+  <style>
+    :root{--bg:#050505;--panel:rgba(0,0,0,.62);--line:rgba(59,130,246,.3);--green:#3B82F6;--acid:#60A5FA;--neon:#38BDF8;--muted:#A1A1AA}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body,#root{margin:0;min-height:100%;width:100%;background:var(--bg);color:#fff;font-family:Inter,sans-serif}
+    body{overflow-x:hidden}
+    #bg-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    #matrix-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0;transition:opacity .5s}
+    body.matrix #matrix-canvas{opacity:.72}
+    body.matrix .app-shell{filter:hue-rotate(20deg) contrast(1.08)}
+    .app-shell{position:relative;z-index:2;min-height:100dvh;isolation:isolate}
+    .glass{background:rgba(0,0,0,.68);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 42px rgba(0,0,0,.25)}
+    .font-orbitron{font-family:Orbitron,sans-serif}.font-chakra{font-family:'Chakra Petch',sans-serif}
+    .neon-text{text-shadow:0 0 12px rgba(56,189,248,.48)}
+    .brand-mark{transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 9px rgba(56,189,248,.4))}
+    .brand-mark.spin{transform:rotateY(360deg)}
+    .btn{transition:transform .18s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease;touch-action:manipulation}
+    .btn:hover:not(:disabled){transform:scale(1.03);box-shadow:0 0 15px rgba(56,189,248,.4),0 0 32px rgba(59,130,246,.2);border-color:rgba(56,189,248,.75)}
+    .btn:active:not(:disabled){transform:scale(.97)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.4)}
+    .nav-item{transition:all .25s cubic-bezier(.2,.8,.2,1);border:1px solid transparent}
+    .nav-item.active{transform:translateY(-4px);background:linear-gradient(180deg,rgba(59,130,246,.18),rgba(59,130,246,.045));border-color:rgba(56,189,248,.35);box-shadow:0 8px 22px rgba(59,130,246,.15),0 0 18px rgba(56,189,248,.08);color:#BFDBFE}
+    .tab-enter{animation:tabIn .38s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes tabIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes pulseBorder{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,.12),0 0 12px rgba(56,189,248,.16)}50%{box-shadow:0 0 0 5px rgba(56,189,248,0),0 0 24px rgba(56,189,248,.35)}}
+    .avatar-pulse{animation:pulseBorder 2.5s infinite;border:1px solid rgba(56,189,248,.8)}
+    .case-card{transform-style:preserve-3d;transition:transform .16s ease,border-color .25s,box-shadow .25s;will-change:transform;overflow:hidden}
+    .case-card:before{content:"";position:absolute;inset:-1px;background:radial-gradient(circle at 50% 0%,rgba(56,189,248,.12),transparent 60%);opacity:.65;pointer-events:none}
+    .case-card:hover{border-color:rgba(56,189,248,.65);box-shadow:0 12px 38px rgba(0,0,0,.35),0 0 22px rgba(56,189,248,.11)}
+    .chest{position:relative;width:82px;height:65px;filter:drop-shadow(0 8px 12px rgba(0,0,0,.65));transform:translateZ(20px)}
+    .chest-top{position:absolute;left:8px;top:3px;width:66px;height:27px;border:2px solid #93C5FD;border-radius:8px 8px 3px 3px;background:linear-gradient(135deg,#172554,#071426 65%,#2563EB);transform:skewY(-5deg);box-shadow:inset 0 0 12px rgba(56,189,248,.18)}
+    .chest-base{position:absolute;left:5px;top:26px;width:72px;height:36px;border:2px solid #3B82F6;border-radius:4px 4px 10px 10px;background:linear-gradient(145deg,#172554,#071426 70%,#1D4ED8);box-shadow:inset 0 0 15px rgba(56,189,248,.12)}
+    .chest-band{position:absolute;left:34px;top:20px;width:14px;height:42px;border:2px solid #BFDBFE;background:linear-gradient(90deg,#60A5FA,#1E40AF);z-index:2;border-radius:2px}
+    .chest-lock{position:absolute;left:34px;top:34px;width:15px;height:14px;border:2px solid #DBEAFE;background:#2563EB;border-radius:4px;z-index:3;box-shadow:0 0 9px #38bdf8}
+    .item-orb{display:grid;place-items:center;border-radius:22px;background:radial-gradient(circle at 30% 20%,rgba(56,189,248,.16),rgba(59,130,246,.04) 58%,rgba(0,0,0,.5));border:1px solid rgba(59,130,246,.32);box-shadow:inset 0 0 20px rgba(59,130,246,.08)}
+    .item-orb:hover .item-emoji{transform:rotateY(360deg) scale(1.08)}
+    .item-emoji{display:inline-block;transition:transform .8s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d}
+    .slot{background:linear-gradient(145deg,rgba(59,130,246,.09),rgba(0,0,0,.72));border:1px dashed rgba(59,130,246,.45);box-shadow:inset 0 0 24px rgba(59,130,246,.035)}
+    .wheel-spin{animation:wheelPulse .22s ease-in-out infinite alternate}
+    @keyframes wheelPulse{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.025) rotate(1deg)}}
+    .pointer{filter:drop-shadow(0 0 9px #38bdf8);transform-origin:50% 50%}
+    .pointer.shake{animation:pointerShake .12s infinite alternate}
+    @keyframes pointerShake{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+    .flash-win{position:fixed;inset:0;z-index:50;pointer-events:none;background:#38bdf8;animation:winFlash .8s ease-out forwards}
+    .flash-lose{position:fixed;inset:0;z-index:50;pointer-events:none;background:#ff234f;animation:loseFlash .55s ease-out forwards}
+    @keyframes winFlash{0%{opacity:.55}100%{opacity:0}}
+    @keyframes loseFlash{0%{opacity:.45}100%{opacity:0}}
+    .screen-shake{animation:screenShake .38s ease}
+    @keyframes screenShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+    .bottom-sheet{animation:sheetIn .34s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes sheetIn{from{transform:translateY(40px) scale(.96);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    .win-pop{animation:winPop .45s cubic-bezier(.18,1.25,.4,1) both}
+    @keyframes winPop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+    .coin{position:fixed;z-index:60;pointer-events:none;animation:coinFall 1.3s ease-in forwards}
+    @keyframes coinFall{0%{transform:translateY(-25px) rotate(0) scale(.5);opacity:0}15%{opacity:1}100%{transform:translateY(105vh) rotate(700deg) scale(1.1);opacity:0}}
+    .runner{position:fixed;bottom:72px;left:-90px;z-index:45;font-size:42px;animation:runAcross 3.2s linear forwards;filter:drop-shadow(0 0 14px #38bdf8);pointer-events:none}
+    @keyframes runAcross{0%{left:-90px;transform:translateY(0) rotate(-8deg)}25%{transform:translateY(-12px) rotate(8deg)}50%{transform:translateY(0) rotate(-6deg)}75%{transform:translateY(-10px) rotate(7deg)}100%{left:110vw;transform:translateY(0)}}
+    .gift-fly{position:fixed;z-index:60;left:50%;top:65%;font-size:64px;animation:giftFly 1.4s cubic-bezier(.2,.8,.2,1) forwards;pointer-events:none}
+    @keyframes giftFly{0%{transform:translate(-50%,30px) scale(.3) rotate(-30deg);opacity:0}30%{opacity:1}100%{transform:translate(180px,-55vh) scale(1.4) rotate(25deg);opacity:0}}
+    .progress-shine{background:linear-gradient(90deg,#3b82f6,#38bdf8,#93C5FD);box-shadow:0 0 15px rgba(56,189,248,.4);transition:width .12s linear}
+    .section-kicker{font:600 10px Orbitron,sans-serif;letter-spacing:.2em;color:#93C5FD}
+    .tiny-grid{background-image:linear-gradient(rgba(59,130,246,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.055) 1px,transparent 1px);background-size:24px 24px}
+    .safe-bottom{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+    .roulette-mask{mask-image:linear-gradient(90deg,transparent 0%,#000 12%,#000 88%,transparent 100%);-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 12%,#000 88%,transparent 100%)}
+    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:rgba(59,130,246,.4);border-radius:9px}
+    @media(min-width:700px){.main-content{max-width:1060px;margin:0 auto}.app-header{max-width:1060px;margin:0 auto}.bottom-nav{max-width:540px;left:50%!important;transform:translateX(-50%)}}
+    @media(max-width:380px){.case-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wheel-wrap{width:218px!important;height:218px!important}}
+  </style>
+</head>
+<body>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <canvas id="matrix-canvas" aria-hidden="true"></canvas>
+  <div id="root"></div>
+
+  <script>
+  // Three.js living background
+  (() => {
+    const canvas = document.getElementById('bg-canvas');
+    if (!window.THREE) return;
+    const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x050505, 0);
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050505, 0.035);
+    const camera = new THREE.PerspectiveCamera(58, window.innerWidth/window.innerHeight, .1, 100);
+    camera.position.set(0,0,16);
+    scene.add(new THREE.AmbientLight(0x60a5fa,.65));
+    const key = new THREE.PointLight(0x38bdf8,2.4,36); key.position.set(4,4,7); scene.add(key);
+    const green = new THREE.MeshStandardMaterial({color:0x3b82f6, emissive:0x172554, emissiveIntensity:1.5, metalness:.7, roughness:.25, wireframe:true});
+    const lime = new THREE.MeshStandardMaterial({color:0x60a5fa, emissive:0x38bdf8, emissiveIntensity:.7, metalness:.5, roughness:.35, wireframe:true});
+    const shapes=[];
+    for(let i=0;i<7;i++){
+      const group=new THREE.Group();
+      const geo=i%2===0?new THREE.TorusGeometry(.7+Math.random()*.6,.16,8,28):new THREE.IcosahedronGeometry(.8+Math.random()*.55,1);
+      const mesh=new THREE.Mesh(geo,i%3===0?lime:green);
+      group.add(mesh);
+      const wire=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x38bdf8,wireframe:true,transparent:true,opacity:.22}));
+      wire.scale.setScalar(1.18); group.add(wire);
+      group.position.set((Math.random()-.5)*25,(Math.random()-.5)*18,-3-Math.random()*18);
+      group.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
+      scene.add(group); shapes.push({group,mesh,phase:Math.random()*6,speed:.08+Math.random()*.15});
+    }
+    const count=680, positions=new Float32Array(count*3), phases=new Float32Array(count);
+    for(let i=0;i<count;i++){positions[i*3]=(Math.random()-.5)*34;positions[i*3+1]=(Math.random()-.5)*24;positions[i*3+2]=-Math.random()*30;phases[i]=Math.random()*Math.PI*2}
+    const pgeo=new THREE.BufferGeometry();pgeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+    const points=new THREE.Points(pgeo,new THREE.PointsMaterial({color:0x38bdf8,size:.035,transparent:true,opacity:.65,sizeAttenuation:true}));scene.add(points);
+    let tx=0,ty=0,mx=0,my=0, idleUntil=Date.now()+30000, lastActivity=Date.now();
+    const activity=()=>{lastActivity=Date.now();idleUntil=lastActivity+30000};
+    window.addEventListener('mousemove',e=>{tx=(e.clientX/window.innerWidth-.5)*1.5;ty=(e.clientY/window.innerHeight-.5)*-1;activity()},{passive:true});
+    window.addEventListener('touchstart',activity,{passive:true});
+    window.addEventListener('pointerdown',activity,{passive:true});
+    function animate(now){
+      requestAnimationFrame(animate);
+      const t=now*.001; mx+=(tx-mx)*.025; my+=(ty-my)*.025;
+      camera.position.x=mx*1.8; camera.position.y=my*1.4; camera.lookAt(0,0,-5);
+      shapes.forEach((s)=>{s.group.rotation.x+=s.speed*.006;s.group.rotation.y+=s.speed*.009;s.group.position.y+=Math.sin(t*.35+s.phase)*.0009;s.mesh.material.emissiveIntensity=.7+(.5+.5*Math.sin(t*.8+s.phase))*1.5;s.group.position.x+=Math.sin(t*.12+s.phase)*.0005});
+      key.intensity=1.5+Math.sin(t*.65)*.55;
+      points.rotation.y=Math.sin(t*.08)*.04;points.rotation.x=Math.cos(t*.1)*.025;
+      const idleMode=Date.now()>idleUntil;
+      const arr=pgeo.attributes.position.array;
+      for(let i=0;i<count;i++){
+        const idx=i*3;
+        arr[idx+1]+=.002*Math.sin(t+phases[i]);
+        if(arr[idx+1]>12)arr[idx+1]=-12;
+        if(idleMode){arr[idx]*=.9993;arr[idx+1]*=.9993;arr[idx+2]+=(-10-arr[idx+2])*.0002}
+        else {arr[idx]+=.0007*Math.sin(t*.4+phases[i]);}
+      }
+      pgeo.attributes.position.needsUpdate=true;
+      renderer.render(scene,camera);
+    }
+    requestAnimationFrame(animate);
+    window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7))});
+  })();
+
+  // Matrix easter egg canvas
+  (() => {
+    const c=document.getElementById('matrix-canvas'),ctx=c.getContext('2d');let cols=[],active=false;
+    function resize(){c.width=window.innerWidth;c.height=window.innerHeight;cols=Array(Math.ceil(c.width/18)).fill(0).map(()=>Math.random()*-50)}
+    resize();window.addEventListener('resize',resize);
+    window.addEventListener('matrix-mode',e=>{active=e.detail;document.body.classList.toggle('matrix',active)});
+    function draw(){requestAnimationFrame(draw);if(!active){ctx.clearRect(0,0,c.width,c.height);return}ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#38bdf8';ctx.font='14px monospace';cols.forEach((y,i)=>{ctx.fillText('01アイロDROP'[Math.floor(Math.random()*10)],i*18,y*18);if(y*18>c.height&&Math.random()>.97)cols[i]=0;cols[i]++})}
+    draw();
+  })();
+  </script>
+
+  <script type="text/babel">
+    const { createClient } = window.supabase;
+    const SUPABASE_URL = 'https://bfpamdqtlzawoqajpaho.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_-EKZnz88m3hY2OQs_CxY7Q_4ldUtx18';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const {useState,useEffect,useContext,useRef,createContext,useMemo}=React;
+    const GameContext=createContext(null);
+
+    // ============================================================================
+    // ПОЛНАЯ БАЗА БРЕЙНРОТОВ ИЗ STEAL A BRAINROT (Упорядочены от худших к лучшим)
+    // ============================================================================
+    const RARITY_CONFIG = {
+      'COMMON':       { label: 'Common',       dot: '🟢', color: '#22c55e', bg: 'rgba(34,197,94,0.14)',   border: 'rgba(34,197,94,0.45)',   weight: 100 },
+      'RARE':         { label: 'Rare',         dot: '🔵', color: '#3b82f6', bg: 'rgba(59,130,246,0.14)',  border: 'rgba(59,130,246,0.45)',  weight: 55 },
+      'EPIC':         { label: 'Epic',         dot: '🟣', color: '#a855f7', bg: 'rgba(168,85,247,0.14)',  border: 'rgba(168,85,247,0.45)',  weight: 28 },
+      'LEGENDARY':    { label: 'Legendary',    dot: '🟠', color: '#f97316', bg: 'rgba(249,115,22,0.14)',  border: 'rgba(249,115,22,0.45)',  weight: 14 },
+      'MYTHIC':       { label: 'Mythic',       dot: '🔴', color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.5)',    weight: 7 },
+      'BRAINROT GOD': { label: 'Brainrot God', dot: '🟡', color: '#eab308', bg: 'rgba(234,179,8,0.16)',   border: 'rgba(234,179,8,0.55)',   weight: 3.2 },
+      'SECRET':       { label: 'Secret',       dot: '🟣', color: '#d946ef', bg: 'rgba(217,70,239,0.16)',  border: 'rgba(217,70,239,0.55)',  weight: 1.4 },
+      'OG':           { label: 'OG',           dot: '⚫', color: '#f43f5e', bg: 'rgba(244,63,94,0.2)',    border: 'rgba(255,255,255,0.65)', weight: 0.5 }
+    };
+
+    const BRAINROTS = [
+      // 🟢 Common
+      { id: 'c1',  name: 'Noobini Pizzanini',             rarity: 'COMMON', emoji: '🍕', value: 10 },
+      { id: 'c2',  name: 'Lirili Larila',                 rarity: 'COMMON', emoji: '🌵', value: 14 },
+      { id: 'c3',  name: 'Tim Cheese',                    rarity: 'COMMON', emoji: '🧀', value: 18 },
+      { id: 'c4',  name: 'Fluriflura',                    rarity: 'COMMON', emoji: '🌸', value: 22 },
+      { id: 'c5',  name: 'Talpa Di Fero',                 rarity: 'COMMON', emoji: '🐾', value: 26 },
+      { id: 'c6',  name: 'Svinina Bombardino',            rarity: 'COMMON', emoji: '🐷', value: 30 },
+      { id: 'c7',  name: 'Noobini Santanini',             rarity: 'COMMON', emoji: '🎅', value: 34 },
+      { id: 'c8',  name: 'Raccooni Jandelini',            rarity: 'COMMON', emoji: '🦝', value: 38 },
+      { id: 'c9',  name: 'Pipi Kiwi',                     rarity: 'COMMON', emoji: '🥝', value: 42 },
+      { id: 'c10', name: 'Tartaragno',                    rarity: 'COMMON', emoji: '🐢', value: 45 },
+      { id: 'c11', name: 'Pipi Corni',                    rarity: 'COMMON', emoji: '🌽', value: 48 },
+      { id: 'c12', name: 'Holy Arepa',                    rarity: 'COMMON', emoji: '🫓', value: 52 },
+
+      // 🔵 Rare
+      { id: 'r1',  name: 'Trippi Troppi',                 rarity: 'RARE',   emoji: '🐟', value: 65 },
+      { id: 'r2',  name: 'Tung Tung Tung Sahur',          rarity: 'RARE',   emoji: '🥁', value: 75 },
+      { id: 'r3',  name: 'Gangster Footera',              rarity: 'RARE',   emoji: '👟', value: 85 },
+      { id: 'r4',  name: 'Bandito Bobritto',              rarity: 'RARE',   emoji: '🦫', value: 95 },
+      { id: 'r5',  name: 'Boneca Ambalabu',               rarity: 'RARE',   emoji: '🪆', value: 110 },
+      { id: 'r6',  name: 'Cacto Hipopotamo',              rarity: 'RARE',   emoji: '🦛', value: 125 },
+      { id: 'r7',  name: 'Ta Ta Ta Ta Sahur',             rarity: 'RARE',   emoji: '🪘', value: 140 },
+      { id: 'r8',  name: 'Cupcake Koala',                 rarity: 'RARE',   emoji: '🐨', value: 155 },
+      { id: 'r9',  name: 'Tric Trac Baraboom',            rarity: 'RARE',   emoji: '💥', value: 170 },
+      { id: 'r10', name: 'Frogo Elfo',                    rarity: 'RARE',   emoji: '🐸', value: 185 },
+      { id: 'r11', name: 'Pipi Avocado',                  rarity: 'RARE',   emoji: '🥑', value: 200 },
+      { id: 'r12', name: 'Pengolino Nuvoletto',           rarity: 'RARE',   emoji: '🐧', value: 215 },
+      { id: 'r13', name: 'Pinealotto Fruttarino',         rarity: 'RARE',   emoji: '🍍', value: 230 },
+
+      // 🟣 Epic
+      { id: 'e1',  name: 'Cappuccino Assassino',          rarity: 'EPIC',   emoji: '☕', value: 260 },
+      { id: 'e2',  name: 'Brr Brr Patapim',               rarity: 'EPIC',   emoji: '🦶', value: 290 },
+      { id: 'e3',  name: 'Avocadini Antilopini',          rarity: 'EPIC',   emoji: '🦌', value: 320 },
+      { id: 'e4',  name: 'Bambini Crostini',              rarity: 'EPIC',   emoji: '🥖', value: 350 },
+      { id: 'e5',  name: 'Malame Amarele',                rarity: 'EPIC',   emoji: '🍋', value: 380 },
+      { id: 'e6',  name: 'Bananita Dolphinita',           rarity: 'EPIC',   emoji: '🐬', value: 410 },
+      { id: 'e7',  name: 'Brri Brri Bicus Dicus Bombicus',rarity: 'EPIC',   emoji: '🐝', value: 445 },
+      { id: 'e8',  name: 'Avocadini Guffo',               rarity: 'EPIC',   emoji: '🦉', value: 480 },
+      { id: 'e9',  name: 'Mangolini Parrocini',           rarity: 'EPIC',   emoji: '🦜', value: 515 },
+      { id: 'e10', name: 'Frogato Pirato',                rarity: 'EPIC',   emoji: '🏴‍☠️', value: 550 },
+      { id: 'e11', name: 'Gato Celesto',                  rarity: 'EPIC',   emoji: '🐱', value: 590 },
+      { id: 'e12', name: 'Doi Doi Do',                    rarity: 'EPIC',   emoji: '🦤', value: 640 },
+      { id: 'e13', name: 'Bandito Axolito',               rarity: 'EPIC',   emoji: '🦎', value: 720 },
+
+      // 🟠 Legendary
+      { id: 'l1',  name: 'Burbaloni Loliloli',            rarity: 'LEGENDARY', emoji: '🍭', value: 780 },
+      { id: 'l2',  name: 'Chimpanzini Bananini',          rarity: 'LEGENDARY', emoji: '🐵', value: 850 },
+      { id: 'l3',  name: 'Ballerina Cappuccina',          rarity: 'LEGENDARY', emoji: '🩰', value: 930 },
+      { id: 'l4',  name: 'Chef Crabracadabra',            rarity: 'LEGENDARY', emoji: '🦀', value: 1020 },
+      { id: 'l5',  name: 'Blueberrinni Octopusini',       rarity: 'LEGENDARY', emoji: '🐙', value: 1120 },
+      { id: 'l6',  name: 'Clickerino Crabo',              rarity: 'LEGENDARY', emoji: '🦞', value: 1200 },
+      { id: 'l7',  name: 'Caramello Filtrello',           rarity: 'LEGENDARY', emoji: '🍮', value: 1280 },
+      { id: 'l8',  name: 'Cocosini Mama',                 rarity: 'LEGENDARY', emoji: '🥥', value: 1370 },
+      { id: 'l9',  name: 'Buho del Cielo',                rarity: 'LEGENDARY', emoji: '🦅', value: 1470 },
+      { id: 'l10', name: 'Chocco Bunny',                  rarity: 'LEGENDARY', emoji: '🐰', value: 1580 },
+      { id: 'l11', name: 'Buho de Fuego',                 rarity: 'LEGENDARY', emoji: '🔥', value: 1700 },
+      { id: 'l12', name: 'Electro Quacko',                rarity: 'LEGENDARY', emoji: '🦆', value: 1850 },
+
+      // 🔴 Mythic
+      { id: 'm1',  name: 'Bombardiro Crocodilo',          rarity: 'MYTHIC', emoji: '🐊', value: 2100 },
+      { id: 'm2',  name: 'Brutto Gialutto',               rarity: 'MYTHIC', emoji: '👹', value: 2300 },
+      { id: 'm3',  name: 'Bombombini Gusini',             rarity: 'MYTHIC', emoji: '🪿', value: 2550 },
+      { id: 'm4',  name: 'Avocadorilla',                  rarity: 'MYTHIC', emoji: '🦍', value: 2800 },
+      { id: 'm5',  name: 'Rhino Helicopterino',           rarity: 'MYTHIC', emoji: '🦏', value: 3100 },
+      { id: 'm6',  name: 'Cachorrito Melonito',           rarity: 'MYTHIC', emoji: '🍉', value: 3350 },
+      { id: 'm7',  name: 'Bee Loco',                      rarity: 'MYTHIC', emoji: '🐝', value: 3600 },
+      { id: 'm8',  name: 'Carloo',                        rarity: 'MYTHIC', emoji: '🐌', value: 3850 },
+      { id: 'm9',  name: 'Centrucci Nuclucci',            rarity: 'MYTHIC', emoji: '☢️', value: 4100 },
+      { id: 'm10', name: 'Bananito Bandito',              rarity: 'MYTHIC', emoji: '🍌', value: 4350 },
+      { id: 'm11', name: 'Berenjello Angello',            rarity: 'MYTHIC', emoji: '🍆', value: 4600 },
+      { id: 'm12', name: 'Bucketoro',                     rarity: 'MYTHIC', emoji: '🪣', value: 4900 },
+
+      // 🟡 Brainrot God
+      { id: 'g1',  name: 'Alessio',                       rarity: 'BRAINROT GOD', emoji: '🤴', value: 5600 },
+      { id: 'g2',  name: 'Ballerino Lololo',              rarity: 'BRAINROT GOD', emoji: '🕺', value: 6100 },
+      { id: 'g3',  name: 'Pineaplino',                    rarity: 'BRAINROT GOD', emoji: '🍍', value: 6500 },
+      { id: 'g4',  name: 'Ballerina Peppermintina',       rarity: 'BRAINROT GOD', emoji: '🍬', value: 7000 },
+      { id: 'g5',  name: 'Aquanaut',                      rarity: 'BRAINROT GOD', emoji: '🤿', value: 7500 },
+      { id: 'g6',  name: 'Lazy Ducky',                    rarity: 'BRAINROT GOD', emoji: '🐥', value: 8000 },
+      { id: 'g7',  name: 'Bambu Bambu Sahur',             rarity: 'BRAINROT GOD', emoji: '🎍', value: 8600 },
+      { id: 'g8',  name: 'Anpali Babel',                  rarity: 'BRAINROT GOD', emoji: '🏛️', value: 9200 },
+      { id: 'g9',  name: 'Astrolero Cervalero',           rarity: 'BRAINROT GOD', emoji: '🦌', value: 9800 },
+      { id: 'g10', name: 'Appelini',                      rarity: 'BRAINROT GOD', emoji: '🍎', value: 10500 },
+      { id: 'g11', name: 'Beavo Potto',                   rarity: 'BRAINROT GOD', emoji: '🦫', value: 11200 },
+      { id: 'g12', name: 'Cola Cat',                      rarity: 'BRAINROT GOD', emoji: '🥤', value: 12000 },
+
+      // 🟣 Secret
+      { id: 's1',  name: 'Polaroidini',                   rarity: 'SECRET', emoji: '📷', value: 14500 },
+      { id: 's2',  name: 'Kalika Bros',                   rarity: 'SECRET', emoji: '👯', value: 16000 },
+      { id: 's3',  name: 'Antonio',                       rarity: 'SECRET', emoji: '🎩', value: 17500 },
+      { id: 's4',  name: 'Orchidox',                      rarity: 'SECRET', emoji: '🌺', value: 19000 },
+      { id: 's5',  name: 'Elefanto Frigo',                rarity: 'SECRET', emoji: '🐘', value: 21000 },
+      { id: 's6',  name: 'Digi Narwhal',                  rarity: 'SECRET', emoji: '🦄', value: 23000 },
+      { id: 's7',  name: 'Arcadragon',                    rarity: 'SECRET', emoji: '🕹️', value: 25000 },
+      { id: 's8',  name: 'Love Love Bear',                rarity: 'SECRET', emoji: '🧸', value: 27500 },
+      { id: 's9',  name: 'Signore Carapace',              rarity: 'SECRET', emoji: '🐢', value: 30000 },
+      { id: 's10', name: 'Dragon Gingerini',              rarity: 'SECRET', emoji: '🐉', value: 33000 },
+      { id: 's11', name: 'Dragon Aquanini',               rarity: 'SECRET', emoji: '🐲', value: 36000 },
+      { id: 's12', name: 'Griffin',                       rarity: 'SECRET', emoji: '🦅', value: 40000 },
+
+      // ⚫ OG
+      { id: 'o1',  name: 'Skibidi Toilet',                rarity: 'OG',     emoji: '🚽', value: 50000 },
+      { id: 'o2',  name: 'John Pork',                     rarity: 'OG',     emoji: '🐽', value: 65000 },
+      { id: 'o3',  name: 'Meowl',                         rarity: 'OG',     emoji: '🦉', value: 80000 },
+      { id: 'o4',  name: 'Headless Horseman',             rarity: 'OG',     emoji: '🎃', value: 95000 },
+      { id: 'o5',  name: 'Strawberry Elephant',           rarity: 'OG',     emoji: '🍓', value: 120000 }
+    ];
+
+    const getByRarities = (rarities) => BRAINROTS.filter(b => rarities.includes(b.rarity));
+
+    const CASES_DATA = [
+      {
+        id: 'free',
+        name: 'First Drop',
+        category: 'БЕСПЛАТНЫЕ',
+        price: 0,
+        emoji: '🍕',
+        rarity: 'COMMON',
+        accent: '#22c55e',
+        desc: 'Базовые брейнроты для старта',
+        pool: getByRarities(['COMMON'])
+      },
+      {
+        id: 'sahur',
+        name: 'Sahur Pack',
+        category: 'ОБЫЧНЫЕ',
+        price: 85,
+        emoji: '🥁',
+        rarity: 'RARE',
+        accent: '#3b82f6',
+        desc: 'Tung Tung Sahur и редкая классика',
+        pool: getByRarities(['COMMON', 'RARE'])
+      },
+      {
+        id: 'espresso',
+        name: 'Assassino Box',
+        category: 'ОБЫЧНЫЕ',
+        price: 260,
+        emoji: '☕',
+        rarity: 'EPIC',
+        accent: '#a855f7',
+        desc: 'Cappuccino Assassino и эпики',
+        pool: getByRarities(['RARE', 'EPIC'])
+      },
+      {
+        id: 'banana',
+        name: 'Cappuccina Vault',
+        category: 'ОБЫЧНЫЕ',
+        price: 750,
+        emoji: '🩰',
+        rarity: 'LEGENDARY',
+        accent: '#f97316',
+        desc: 'Ballerina Cappuccina и легендарки',
+        pool: getByRarities(['EPIC', 'LEGENDARY'])
+      },
+      {
+        id: 'crocodilo',
+        name: 'Crocodilo Strike',
+        category: 'ПРЕМИУМ',
+        price: 2200,
+        emoji: '🐊',
+        rarity: 'MYTHIC',
+        accent: '#ef4444',
+        desc: 'Bombardiro Crocodilo и мифики',
+        pool: getByRarities(['LEGENDARY', 'MYTHIC'])
+      },
+      {
+        id: 'gods',
+        name: 'Brainrot Pantheon',
+        category: 'ПРЕМИУМ',
+        price: 6200,
+        emoji: '🤴',
+        rarity: 'BRAINROT GOD',
+        accent: '#eab308',
+        desc: 'Божественный тир Брейнротов',
+        pool: getByRarities(['MYTHIC', 'BRAINROT GOD'])
+      },
+      {
+        id: 'secret_vault',
+        name: 'Classified Secret',
+        category: 'OG & SECRET',
+        price: 16500,
+        emoji: '🐉',
+        rarity: 'SECRET',
+        accent: '#d946ef',
+        desc: 'Секретные драконы и грифоны',
+        pool: getByRarities(['BRAINROT GOD', 'SECRET'])
+      },
+      {
+        id: 'og_legends',
+        name: 'OG // ALL-IN',
+        category: 'OG & SECRET',
+        price: 42000,
+        emoji: '🍓',
+        rarity: 'OG',
+        accent: '#f43f5e',
+        desc: 'Strawberry Elephant, John Pork и OG',
+        pool: getByRarities(['SECRET', 'OG'])
+      }
+    ];
+
+    const initialInventory = [
+      { ...BRAINROTS[0], id: 101 },  // Noobini Pizzanini
+      { ...BRAINROTS[13], id: 102 }, // Tung Tung Tung Sahur
+      { ...BRAINROTS[25], id: 103 }  // Cappuccino Assassino
+    ];
+
+    function pickWeightedItem(pool) {
+      const weights = pool.map((item, idx) => {
+        const baseW = RARITY_CONFIG[item.rarity]?.weight || 10;
+        const subFactor = 1 / (1 + (idx % 12) * 0.08);
+        return baseW * subFactor * (item.value < 500 ? 2.8 : item.value < 2000 ? 1.25 : 0.42);
+      });
+      const total = weights.reduce((a, b) => a + b, 0);
+      let r = Math.random() * total;
+      for (let i = 0; i < pool.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return pool[i];
+      }
+      return pool[pool.length - 1];
+    }
+
+    const FREE_CASE_COOLDOWN = 20 * 60 * 1000;
+    const freeCooldownKey = userId => `vertix_free_case_${userId || 'guest'}`;
+    const money = n => Math.floor(n).toLocaleString('ru-RU');
+    const useGame = () => useContext(GameContext);
+
+    function buzz(ms=15) {
+      try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e) {}
+    }
+
+    function sound(type='click') {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ac = window.__brainrotAudio || (window.__brainrotAudio = new AC());
+        if (ac.state === 'suspended') ac.resume();
+        const now = ac.currentTime;
+
+        if (type === 'tick') {
+          const osc = ac.createOscillator(), gain = ac.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520 + Math.random() * 140, now);
+          osc.frequency.exponentialRampToValueAtTime(160, now + 0.025);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+          osc.connect(gain); gain.connect(ac.destination);
+          osc.start(now); osc.stop(now + 0.03);
+          return;
+        }
+
+        const frequencies = { click:[440,.045], win:[660,.28], lose:[135,.25], open:[520,.11] };
+        const [f, d] = frequencies[type] || frequencies.click;
+        const osc = ac.createOscillator(), gain = ac.createGain();
+        osc.type = type === 'lose' ? 'sawtooth' : 'sine';
+        osc.frequency.setValueAtTime(f, now);
+        if (type === 'win') {
+          osc.frequency.exponentialRampToValueAtTime(990, now + d * 0.5);
+          osc.frequency.exponentialRampToValueAtTime(1320, now + d);
+        }
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(type === 'click' ? 0.035 : 0.09, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + d);
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.start(now); osc.stop(now + d + 0.02);
+      } catch(e) {}
+    }
+
+    function RarityBadge({rarity, small=false}) {
+      const cfg = RARITY_CONFIG[rarity] || RARITY_CONFIG.COMMON;
+      return (
+        <span
+          className={`inline-flex items-center gap-1 font-orbitron font-bold rounded-md border ${small ? 'text-[8px] px-1.5 py-0.5' : 'text-[9px] px-2 py-0.5'}`}
+          style={{ color: cfg.color, backgroundColor: cfg.bg, borderColor: cfg.border }}
+        >
+          <span>{cfg.dot}</span>
+          <span>{cfg.label.toUpperCase()}</span>
+        </span>
+      );
+    }
+
+    function ActionButton({children,onClick,disabled=false,className='',variant='solid',type='button'}){
+      return <button type={type} disabled={disabled} onClick={e=>{if(disabled)return;buzz();sound('click');onClick&&onClick(e)}} className={`btn rounded-xl font-orbitron text-[10px] sm:text-xs tracking-wider px-4 py-3 ${variant==='ghost'?'border border-blue-500/30 bg-black/40 text-blue-200':'border border-blue-400/40 bg-gradient-to-r from-blue-500 to-blue-400 text-black font-bold'} ${className}`}>{children}</button>
+    }
+
+    function TelegramIcon({className="w-3.5 h-3.5"}) {
+      return (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+        </svg>
+      );
+    }
+
+    // ГАЛОЧКА ВЕРИФИКАЦИИ (VERIFIED BADGE)
+    function VerifiedBadge({className="w-4 h-4"}) {
+      return (
+        <span title="Верифицированный игрок" className="inline-flex items-center justify-center shrink-0 align-middle select-none">
+          <svg viewBox="0 0 24 24" className={`${className} drop-shadow-[0_0_8px_rgba(56,189,248,0.85)]`} fill="none">
+            <path
+              d="M12 1.8L14.85 3.65L18.2 3.25L19.55 6.35L22.5 8.1L21.75 11.4L23.2 14.45L20.65 16.75L20.4 20.15L17.05 20.75L14.9 23.35L12 21.9L9.1 23.35L6.95 20.75L3.6 20.15L3.35 16.75L0.8 14.45L2.25 11.4L1.5 8.1L4.45 6.35L5.8 3.25L9.15 3.65L12 1.8Z"
+              fill="url(#verifiedGrad)"
+              stroke="#BAE6FD"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M8.3 12.2L10.8 14.7L15.9 9.5"
+              stroke="#050505"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <defs>
+              <linearGradient id="verifiedGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#38BDF8" />
+                <stop offset="50%" stopColor="#60A5FA" />
+                <stop offset="100%" stopColor="#2563EB" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+      );
+    }
+
+    function FooterDisclaimer() {
+      return (
+        <footer className="mt-10 mb-2 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md px-4 py-3.5 text-center opacity-65 hover:opacity-100 transition-opacity duration-300">
+          <p className="text-[11px] sm:text-xs text-zinc-300 leading-relaxed">
+            Проект сертифицирован владельцем игры Steal a Vert1x. Все права на сайт и игру защищены.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] sm:text-xs text-zinc-400 font-chakra">
+            <a
+              href="https://t.me/RobloxOwners"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 transition-colors"
+            >
+              <span className="text-zinc-400">Разработчик</span>
+              <TelegramIcon className="w-3.5 h-3.5 text-[#2AABEE]" />
+              <span className="font-semibold">@RobloxOwners</span>
+            </a>
+            <span className="text-zinc-700">•</span>
+            <a
+              href="https://t.me/BrainrotDropAPK"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sky-400 hover:text-sky-300 transition-colors"
+            >
+              <span className="text-zinc-400">ТГК</span>
+              <TelegramIcon className="w-3.5 h-3.5 text-[#2AABEE]" />
+              <span className="font-semibold">@BrainrotDropAPK</span>
+            </a>
+          </div>
+        </footer>
+      );
+    }
+
+    function Header({onDeposit}){
+      const {balance,user}=useGame();const [spun,setSpun]=useState(false);const clicks=useRef([]);
+      function logoClick(){setSpun(true);setTimeout(()=>setSpun(false),750);clicks.current.push(Date.now());clicks.current=clicks.current.filter(t=>Date.now()-t<1600);if(clicks.current.length>=5){clicks.current=[];window.dispatchEvent(new Event('brainrot-runner'));window.dispatchEvent(new Event('secret-promo'))}}
+      return <header className="app-header px-4 pt-4 pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={logoClick} className="flex items-center gap-2 text-left" aria-label="Vert1x Drop home">
+            <span className={`brand-mark ${spun?'spin':''} grid place-items-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400/20 to-blue-300/5 border border-neon/40`}>
+              <svg width="27" height="27" viewBox="0 0 32 32" fill="none"><path d="M5 6L16 25L27 6H20L16 14L12 6H5Z" fill="#38BDF8"/><path d="M10 18L16 28L22 18" stroke="#3B82F6" strokeWidth="2"/></svg>
+            </span>
+            <span><span className="font-orbitron font-black text-[13px] sm:text-[15px] tracking-[.08em] block">VERT1X<span className="text-sky-300">DROP</span></span><span className="text-[8px] tracking-[.24em] text-zinc-500 font-chakra">STEAL A VERT1X EDITION</span></span>
+          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onDeposit} className="glass rounded-xl px-3 py-2 flex items-center gap-2 btn">
+              <span className="text-sky-300 text-lg">◈</span><span className="text-right"><span className="block font-chakra font-bold text-[17px] leading-4 text-sky-300 neon-text">{money(balance)}</span><span className="block text-[8px] tracking-widest text-zinc-400 mt-1">COINS <span className="text-blue-400">＋</span></span></span>
+            </button>
+            <div className="relative">
+              <div className="avatar-pulse w-10 h-10 rounded-full bg-gradient-to-br from-blue-900 to-black grid place-items-center text-xl relative overflow-hidden">
+                {user.avatarData?<img src={user.avatarData} className="w-full h-full object-cover"/>:<span>{user.avatar}</span>}
+              </div>
+              {user.verified ? (
+                <span className="absolute -bottom-1 -right-1"><VerifiedBadge className="w-4 h-4" /></span>
+              ) : (
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-neon border-2 border-black"></span>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+    }
+
+    function BottomNav({active,setActive,isAdmin=false}){
+      const nav=[['cases','▦','КЕЙСЫ'],['upgrade','⌁','АПГРЕЙД'],['leaderboard','♛','ТОП'],['profile','◉','ПРОФИЛЬ'],...(isAdmin?[['admin','⚙','АДМИН']]:[])];
+      return <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-30 px-4 safe-bottom pt-2">
+        <div className={`glass rounded-2xl p-2 grid ${isAdmin?'grid-cols-5':'grid-cols-4'} gap-2 shadow-2xl`}>
+          {nav.map(([id,icon,label])=><button key={id} onClick={()=>{buzz();sound('click');setActive(id)}} className={`nav-item rounded-xl py-2.5 flex flex-col items-center justify-center gap-1 ${active===id?'active':'text-zinc-500 hover:text-blue-200'}`}><span className="text-xl leading-5">{icon}</span><span className="font-orbitron text-[9px] tracking-[.12em]">{label}</span></button>)}
+        </div>
+      </nav>
+    }
+
+    function SectionTitle({eyebrow,title,right}){return <div className="flex items-end justify-between gap-3 mb-4"><div><div className="section-kicker mb-1">{eyebrow}</div><h2 className="font-orbitron text-lg sm:text-xl font-bold tracking-tight">{title}</h2></div>{right}</div>}
+
+    function CaseCard({item,onOpen}){
+      const {balance}=useGame();const [tilt,setTilt]=useState({x:0,y:0});const affordable=balance>=item.price;
+      const cfg = RARITY_CONFIG[item.rarity] || RARITY_CONFIG.COMMON;
+      return <button onClick={()=>onOpen(item)} onMouseMove={e=>{const r=e.currentTarget.getBoundingClientRect();setTilt({x:((e.clientY-r.top)/r.height-.5)*-9,y:((e.clientX-r.left)/r.width-.5)*10})}} onMouseLeave={()=>setTilt({x:0,y:0})} className="case-card glass rounded-2xl p-3 sm:p-4 text-left relative min-w-0 flex flex-col justify-between" style={{transform:`perspective(700px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`}}>
+        <div className="flex justify-between items-center relative z-10 gap-1">
+          <RarityBadge rarity={item.rarity} small />
+          <span className="text-[9px] text-zinc-500 font-chakra">{item.pool.length} шт.</span>
+        </div>
+        <div className="h-[100px] sm:h-[115px] flex items-center justify-center relative my-1">
+          <div className="absolute w-24 h-24 rounded-full blur-2xl opacity-30" style={{background:cfg.color}}></div>
+          <div className="chest"><div className="chest-top"></div><div className="chest-base"></div><div className="chest-band"></div><div className="chest-lock"></div></div>
+          <span className="absolute right-1 top-2 text-3xl drop-shadow-lg">{item.emoji}</span>
+        </div>
+        <div className="relative z-10">
+          <h3 className="font-orbitron font-bold text-xs sm:text-sm truncate">{item.name}</h3>
+          <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{item.desc}</p>
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5 gap-1">
+            <span className={`font-chakra text-base sm:text-lg font-bold ${affordable?'text-sky-300 neon-text':'text-zinc-500'}`}>{item.price===0?'FREE':money(item.price)+' ◈'}</span>
+            <span className={`text-[9px] font-orbitron ${affordable?'text-blue-300':'text-rose-400/80'}`}>{affordable?'ОТКРЫТЬ ↗':'МАЛО ◈'}</span>
+          </div>
+        </div>
+      </button>
+    }
+
+    // ============================================================================
+    // МОДАЛКА ОТКРЫТИЯ КЕЙСА С АНИМАЦИЕЙ ПРОКРУТКИ РУЛЕТКИ
+    // ============================================================================
+    function CaseOpenModal({caseItem, onClose}) {
+      const {balance, setBalance, addItem, user} = useGame();
+      const [cooldownNow, setCooldownNow] = useState(Date.now());
+      useEffect(() => { const t = setInterval(() => setCooldownNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+      const freeUntil = Number(localStorage.getItem(freeCooldownKey(user.id)) || 0);
+      const freeRemaining = caseItem.id === 'free' ? Math.max(0, freeUntil - cooldownNow) : 0;
+      const freeBlocked = caseItem.id === 'free' && freeRemaining > 0;
+      const [phase, setPhase] = useState('idle');
+      const [reel, setReel] = useState([]);
+      const [offset, setOffset] = useState(0);
+      const [transitionCss, setTransitionCss] = useState('none');
+      const [wonItem, setWonItem] = useState(null);
+      const [didNotPay, setDidNotPay] = useState(false);
+      const [fastMode, setFastMode] = useState(false);
+
+      const viewportRef = useRef(null);
+      const timersRef = useRef([]);
+
+      const WIN_INDEX = 42;
+      const TOTAL_CARDS = 54;
+      const CARD_WIDTH = 124;
+      const CARD_GAP = 10;
+      const STEP = CARD_WIDTH + CARD_GAP;
+
+      useEffect(() => {
+        return () => timersRef.current.forEach(t => clearTimeout(t));
+      }, []);
+
+      useEffect(() => {
+        const preview = Array.from({length: 15}, (_, i) => caseItem.pool[i % caseItem.pool.length]);
+        setReel(preview);
+        setOffset(0);
+        setTransitionCss('none');
+        setPhase('idle');
+        setWonItem(null);
+        setDidNotPay(false);
+      }, [caseItem]);
+
+      function startSpin() {
+        if (phase === 'spinning') return;
+        if (balance < caseItem.price || freeBlocked) {
+          sound('lose');
+          return;
+        }
+        if (caseItem.id === 'free') localStorage.setItem(freeCooldownKey(user.id), String(Date.now() + FREE_CASE_COOLDOWN));
+        supabase.rpc('record_case_open').then(({error})=>{if(error)console.warn('Leaderboard counter update failed:',error)});
+
+        timersRef.current.forEach(t => clearTimeout(t));
+        timersRef.current = [];
+
+        setBalance(b => b - caseItem.price);
+        sound('open');
+        buzz(25);
+
+        const loseRoll = caseItem.price > 0 && Math.random() < 0.72;
+        const belowCostPool = caseItem.price > 0
+          ? caseItem.pool.filter(item => item.value < caseItem.price)
+          : [];
+        const winner = loseRoll
+          ? pickWeightedItem(belowCostPool.length ? belowCostPool : [...caseItem.pool].sort((a, b) => a.value - b.value).slice(0, Math.max(1, Math.ceil(caseItem.pool.length * 0.25))))
+          : pickWeightedItem(caseItem.pool);
+        const generatedReel = Array.from({length: TOTAL_CARDS}, (_, idx) => {
+          if (idx === WIN_INDEX) return winner;
+          return pickWeightedItem(caseItem.pool);
+        });
+
+        setWonItem(winner);
+        setDidNotPay(loseRoll);
+        setReel(generatedReel);
+        setPhase('spinning');
+        setTransitionCss('none');
+        setOffset(0);
+
+        const duration = fastMode ? 1200 : 4800;
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const vw = viewportRef.current ? viewportRef.current.clientWidth : 340;
+            const jitter = (Math.random() - 0.5) * (CARD_WIDTH * 0.55);
+            const targetOffset = (WIN_INDEX * STEP) + (CARD_WIDTH / 2) - (vw / 2) + jitter;
+
+            setTransitionCss(`transform ${duration}ms cubic-bezier(0.10, 0.85, 0.15, 1)`);
+            setOffset(targetOffset);
+
+            const ticksCount = fastMode ? 10 : 32;
+            for (let i = 1; i <= ticksCount; i++) {
+              const progress = i / ticksCount;
+              const tickDelay = Math.pow(progress, 2.15) * (duration - 150);
+              const tId = setTimeout(() => {
+                sound('tick');
+                if (i % 4 === 0) buzz(8);
+              }, tickDelay);
+              timersRef.current.push(tId);
+            }
+
+            const endTimer = setTimeout(() => {
+              addItem({ name: winner.name, emoji: winner.emoji, value: winner.value, rarity: winner.rarity });
+              setWonItem(winner);
+              setPhase('won');
+              if (loseRoll) { sound('lose'); buzz(35); }
+              else { sound('win'); buzz(60); }
+            }, duration + 120);
+            timersRef.current.push(endTimer);
+          });
+        });
+      }
+
+      const canAfford = balance >= caseItem.price;
+
+      return (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+          onClick={() => { if (phase !== 'spinning') onClose(); }}
+        >
+          <div
+            className="glass rounded-3xl p-4 sm:p-6 w-full max-w-2xl bottom-sheet border border-blue-500/40 my-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-3xl">{caseItem.emoji}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-orbitron font-bold text-base sm:text-lg truncate">{caseItem.name}</h3>
+                    <RarityBadge rarity={caseItem.rarity} small />
+                  </div>
+                  <p className="text-xs text-zinc-400 truncate">{caseItem.desc}</p><p className="text-[9px] text-rose-300 mt-1">Шанс проигрыша: {caseItem.price===0?'58%':'72%'}</p>
+                </div>
+              </div>
+              <button
+                disabled={phase === 'spinning'}
+                onClick={onClose}
+                className="w-9 h-9 rounded-xl border border-white/10 bg-white/5 text-zinc-400 hover:text-white grid place-items-center text-xl disabled:opacity-30"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 relative">
+              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[3px] bg-neon z-20 pointer-events-none shadow-[0_0_12px_#38BDF8]"></div>
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-sky-300 text-sm drop-shadow-[0_0_8px_#38BDF8]">▼</div>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-sky-300 text-sm drop-shadow-[0_0_8px_#38BDF8]">▲</div>
+
+              <div
+                ref={viewportRef}
+                className="roulette-mask overflow-hidden rounded-2xl bg-black/80 border border-blue-500/30 py-4 relative"
+              >
+                <div
+                  className="flex items-center"
+                  style={{
+                    gap: `${CARD_GAP}px`,
+                    transform: `translate3d(-${offset}px, 0, 0)`,
+                    transition: transitionCss,
+                    willChange: 'transform'
+                  }}
+                >
+                  {reel.map((bItem, idx) => {
+                    const cfg = RARITY_CONFIG[bItem.rarity] || RARITY_CONFIG.COMMON;
+                    const isWinnerCard = phase === 'won' && idx === WIN_INDEX;
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          width: `${CARD_WIDTH}px`,
+                          minWidth: `${CARD_WIDTH}px`,
+                          borderColor: isWinnerCard ? '#38BDF8' : cfg.border,
+                          background: `linear-gradient(165deg, ${cfg.bg}, rgba(5,5,5,0.92))`
+                        }}
+                        className={`rounded-2xl p-2.5 text-center border transition-transform ${isWinnerCard ? 'scale-105 shadow-neon' : ''}`}
+                      >
+                        <div className="text-[8px] font-orbitron tracking-wider truncate" style={{color: cfg.color}}>
+                          {cfg.dot} {cfg.label}
+                        </div>
+                        <div className="text-4xl my-2 select-none drop-shadow">{bItem.emoji}</div>
+                        <div className="font-orbitron font-bold text-[10px] text-white truncate px-1">{bItem.name}</div>
+                        <div className="font-chakra text-xs text-sky-300 mt-0.5">{money(bItem.value)} ◈</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {phase === 'won' ? (wonItem ? (
+              <div className="mt-5 p-4 rounded-2xl border border-neon/60 bg-blue-950/25 text-center win-pop">
+                <div className={`section-kicker ${didNotPay ? 'text-rose-300' : 'text-sky-300'}`}>{didNotPay ? 'НЕ ОКУПИЛОСЬ — НО ДРОП ТВОЙ!' : 'НОВЫЙ БРЕЙНРОТ ПОЛУЧЕН!'}</div>
+                <div className="text-5xl my-2">{wonItem.emoji}</div>
+                <div className="font-orbitron font-black text-lg text-white">{wonItem.name}</div>
+                <div className="mt-1 flex items-center justify-center gap-2">
+                  <RarityBadge rarity={wonItem.rarity} />
+                  <span className="font-chakra font-bold text-sky-300 text-base">{money(wonItem.value)} ◈</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-2">{didNotPay ? `Дроп дешевле кейса (${money(caseItem.price)} ◈). Предмет всё равно добавлен в инвентарь.` : 'Предмет уже добавлен в твой инвентарь!'}</p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <ActionButton variant="ghost" className="flex-1" onClick={onClose}>В ИНВЕНТАРЬ</ActionButton>
+                  <ActionButton
+                    className="flex-1"
+                    disabled={!canAfford || freeBlocked}
+                    onClick={startSpin}
+                  >
+                    {freeBlocked ? `БЕСПЛАТНЫЙ КЕЙС ЧЕРЕЗ ${Math.floor(freeRemaining/60000)}:${String(Math.floor((freeRemaining%60000)/1000)).padStart(2,'0')}` : `КРУТИТЬ ЕЩЁ (${caseItem.price === 0 ? 'FREE' : money(caseItem.price) + ' ◈'})`}
+                  </ActionButton>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 p-5 rounded-2xl border border-rose-500/40 bg-rose-950/20 text-center win-pop">
+                <div className="text-4xl mb-2">💥</div><div className="font-orbitron font-bold text-rose-300">НЕ ОКУПИЛОСЬ!</div>
+                <p className="text-xs text-zinc-400 mt-2">В этот раз без дропа. Попробуй снова позже.</p>
+                <ActionButton variant="ghost" className="w-full mt-4" onClick={onClose}>ЗАКРЫТЬ</ActionButton>
+              </div>
+            )) : (
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  disabled={phase === 'spinning'}
+                  onClick={() => setFastMode(f => !f)}
+                  className={`px-3 py-3 rounded-xl font-orbitron text-[10px] border transition ${fastMode ? 'border-neon bg-neon/15 text-sky-300' : 'border-white/15 bg-black/40 text-zinc-400'}`}
+                >
+                  ⚡ БЫСТРО: {fastMode ? 'ВКЛ' : 'ВЫКЛ'}
+                </button>
+
+                <ActionButton
+                  className="flex-1 py-3.5 text-xs sm:text-sm"
+                  disabled={phase === 'spinning' || !canAfford || freeBlocked}
+                  onClick={startSpin}
+                >
+                  {phase === 'spinning'
+                    ? 'ОТКРЫВАЕМ КЕЙС...'
+                    : !canAfford
+                    ? `НЕ ХВАТАЕТ МОНЕТ (${money(caseItem.price)} ◈)`
+                    : freeBlocked ? `БЕСПЛАТНЫЙ КЕЙС ЧЕРЕЗ ${Math.floor(freeRemaining/60000)}:${String(Math.floor((freeRemaining%60000)/1000)).padStart(2,'0')}` : `ОТКРЫТЬ КЕЙС ЗА ${caseItem.price === 0 ? 'FREE' : money(caseItem.price) + ' ◈'}`}
+                </ActionButton>
+              </div>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <span className="section-kicker">СОДЕРЖИМОЕ КЕЙСА ({caseItem.pool.length} БРЕЙНРОТОВ)</span>
+                <span className="text-[10px] text-zinc-500">От худших к лучшим</span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-52 overflow-y-auto pr-1">
+                {caseItem.pool.map(b => {
+                  const cfg = RARITY_CONFIG[b.rarity] || RARITY_CONFIG.COMMON;
+                  return (
+                    <div
+                      key={b.id}
+                      className="rounded-xl p-2 text-center border bg-black/40"
+                      style={{ borderColor: cfg.border }}
+                    >
+                      <div className="text-2xl">{b.emoji}</div>
+                      <div className="font-orbitron text-[9px] truncate mt-1 text-zinc-200" title={b.name}>{b.name}</div>
+                      <div className="text-[8px] font-bold mt-0.5 truncate" style={{color: cfg.color}}>{cfg.dot} {cfg.label}</div>
+                      <div className="font-chakra text-[10px] text-sky-300 mt-0.5">{money(b.value)} ◈</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CasesTab(){
+      const [openedCase, setOpenedCase] = useState(null);
+      const groups = ['БЕСПЛАТНЫЕ', 'ОБЫЧНЫЕ', 'ПРЕМИУМ', 'OG & SECRET'];
+
+      return <div className="tab-enter space-y-6">
+        <div className="glass rounded-2xl p-4 sm:p-5 tiny-grid relative overflow-hidden">
+          <div className="absolute -right-5 -top-8 text-8xl opacity-[.07]">◈</div>
+          <div className="section-kicker">STEAL A VERT1X / DROP ZONE</div>
+          <h1 className="font-orbitron text-2xl sm:text-3xl font-black mt-2 leading-tight">СОБЕРИ ВСЕХ<br/><span className="text-sky-300 neon-text">БРЕЙНРОТОВ.</span></h1>
+          <p className="text-xs text-zinc-400 mt-2 max-w-[340px] leading-relaxed">Игра выводит Brainrot’ов не в оригинальном Steal a Brainrot, а в фанмейд-игре Steal a Vert1x.</p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <span className="border border-blue-500/25 bg-blue-500/5 rounded-lg px-2.5 py-1.5 text-[9px] text-blue-200">✦ {BRAINROTS.length} ОРИГИНАЛЬНЫХ БРЕЙНРОТОВ</span>
+            <span className="border border-blue-500/25 bg-blue-500/5 rounded-lg px-2.5 py-1.5 text-[9px] text-blue-200">✦ 8 РЕДКОСТЕЙ</span>
+          </div>
+        </div>
+
+        {groups.map((group, idx) => {
+          const items = CASES_DATA.filter(i => i.category === group);
+          return (
+            <section key={group}>
+              <SectionTitle eyebrow={`DROP SERIES / 0${idx + 1}`} title={group}/>
+              <div className="case-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {items.map(item => (
+                  <CaseCard key={item.id} item={item} onOpen={c => { sound('open'); setOpenedCase(c); }}/>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+
+        {openedCase && (
+          <CaseOpenModal
+            caseItem={openedCase}
+            onClose={() => setOpenedCase(null)}
+          />
+        )}
+      </div>
+    }
+
+    // ============================================================================
+    // ОБНОВЛЕННЫЙ АПГРЕЙДЕР: АНИМАЦИЯ 3.2 СЕК + ЗАПОЛНЯЮЩАЯСЯ ПОЛОСА ШАНСА ВНУТРИ КРУГА
+    // ============================================================================
+    function UpgradeTab(){
+      const {inventory, addItem, removeItem} = useGame();
+      const [selected, setSelected] = useState(null);
+      const [target, setTarget] = useState(null);
+      const [mult, setMult] = useState('x2');
+      const [spinning, setSpinning] = useState(false);
+      const [outcome, setOutcome] = useState(null);
+      const [needle, setNeedle] = useState(0);
+      const [flash, setFlash] = useState('');
+
+      const multipliers = [['x2',2],['x4',4],['x8',8],['35%',.35],['55%',.55],['75%',.75]];
+      const chance = (mult.endsWith('%') ? parseInt(mult)/100 : 1/parseInt(mult)) * 0.60;
+      const pct = Math.round(chance * 100);
+      const stake = selected?.value || 0;
+      const desiredValue = Math.max(20, Math.round(stake * (1 / chance)));
+
+      const possibleTargets = useMemo(() => {
+        if (!selected) return [];
+        const sorted = [...BRAINROTS].filter(b => b.value > selected.value);
+        if (sorted.length === 0) return BRAINROTS.slice(-6);
+        sorted.sort((a, b) => Math.abs(a.value - desiredValue) - Math.abs(b.value - desiredValue));
+        return sorted.slice(0, 6).sort((a, b) => a.value - b.value);
+      }, [selected, desiredValue]);
+
+      function chooseTarget(item){ setTarget(item); setOutcome(null); }
+
+      function runUpgrade(){
+        if (spinning || !selected || !target) return;
+        setSpinning(true);
+        setOutcome(null);
+        sound('open');
+        buzz(50);
+
+        const win = Math.random() < chance;
+        const winZoneDeg = chance * 360;
+
+        // Если выиграл — стрелка останавливается внутри сектора шанса (0..winZoneDeg)
+        // Если проиграл — стрелка останавливается за его пределами (winZoneDeg..360)
+        const margin = 4;
+        let finalAngleMod;
+        if (win) {
+          finalAngleMod = margin + Math.random() * Math.max(2, winZoneDeg - margin * 2);
+        } else {
+          finalAngleMod = winZoneDeg + margin + Math.random() * Math.max(2, (360 - winZoneDeg) - margin * 2);
+        }
+
+        const startAngle = needle % 360;
+        const spins = 6 * 360; // 6 полных оборотов для сочной 3.2-секундной прокрутки
+        const totalDelta = spins + ((finalAngleMod - startAngle + 360) % 360);
+
+        const start = performance.now();
+        const duration = 3200; // ~3.2 секунды
+        let lastTickAngle = startAngle;
+
+        function tick(now){
+          const p = Math.min(1, (now - start) / duration);
+          // Плавное замедление (cubic-quartic ease-out)
+          const ease = 1 - Math.pow(1 - p, 3.5);
+          const currentAngle = startAngle + totalDelta * ease;
+          setNeedle(currentAngle);
+
+          if (currentAngle - lastTickAngle >= 38) {
+            lastTickAngle = currentAngle;
+            sound('tick');
+          }
+
+          if (p < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            setSpinning(false);
+            setFlash(win ? 'win' : 'lose');
+            setTimeout(() => setFlash(''), 850);
+
+            if (win) {
+              removeItem(selected.id);
+              addItem({ name: target.name, emoji: target.emoji, value: target.value, rarity: target.rarity });
+              setOutcome({ win: true, item: target });
+              sound('win');
+              confetti();
+            } else {
+              removeItem(selected.id);
+              setOutcome({ win: false, item: selected });
+              sound('lose');
+              document.querySelector('.app-shell')?.classList.add('screen-shake');
+              setTimeout(() => document.querySelector('.app-shell')?.classList.remove('screen-shake'), 400);
+            }
+            setSelected(null);
+            setTarget(null);
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+
+      function confetti(){
+        for(let i=0;i<24;i++){
+          const el=document.createElement('div');
+          el.textContent=['✦','◆','●','◈'][i%4];
+          el.style.cssText=`position:fixed;z-index:55;left:50%;top:48%;color:${i%2?'#38bdf8':'#93C5FD'};font-size:${10+Math.random()*18}px;pointer-events:none;transition:all ${.7+Math.random()*.7}s ease-out;`;
+          document.body.appendChild(el);
+          requestAnimationFrame(()=>{
+            el.style.transform=`translate(${(Math.random()-.5)*window.innerWidth}px,${(Math.random()-.5)*window.innerHeight}px) rotate(${Math.random()*500}deg)`;
+            el.style.opacity='0';
+          });
+          setTimeout(()=>el.remove(),1600);
+        }
+      }
+
+      // Расчёт длины дуги для заполняющейся полосы шанса внутри круга
+      const radius = 98;
+      const circumference = 2 * Math.PI * radius;
+      const winDash = circumference * chance;
+
+      return <div className="tab-enter space-y-5">
+        <div className="flex items-end justify-between">
+          <div><div className="section-kicker">RISK ENGINE / 01</div><h1 className="font-orbitron font-black text-2xl mt-1">UPGRADE<span className="text-sky-300">_</span></h1></div>
+          <div className="text-right"><div className="text-[9px] text-zinc-500 tracking-widest">SUCCESS CHANCE</div><div className="font-chakra text-2xl text-sky-300 neon-text">{pct}<span className="text-sm">%</span></div></div>
+        </div>
+        <div className="glass rounded-3xl p-4 sm:p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-30 tiny-grid"></div>
+          <div className="relative flex flex-col items-center">
+            <div className="wheel-wrap relative w-[250px] h-[250px] sm:w-[285px] sm:h-[285px]">
+              <svg viewBox="0 0 280 280" className="w-full h-full">
+                <defs>
+                  <linearGradient id="wheelGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8"/>
+                    <stop offset="52%" stopColor="#3b82f6"/>
+                    <stop offset="100%" stopColor="#071426"/>
+                  </linearGradient>
+                  <linearGradient id="chanceBarGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#7DD3FC"/>
+                    <stop offset="50%" stopColor="#38BDF8"/>
+                    <stop offset="100%" stopColor="#2563EB"/>
+                  </linearGradient>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+
+                {/* Внешний корпус колеса (неподвижный) */}
+                <circle cx="140" cy="140" r="128" fill="#050914" stroke="#1E3A8A" strokeWidth="2"/>
+                <circle cx="140" cy="140" r="118" fill="none" stroke="url(#wheelGrad)" strokeWidth="2.5" filter="url(#glow)"/>
+
+                {/* Деления циферблата */}
+                {Array.from({length:36},(_,i)=><line key={i} x1="140" y1="22" x2="140" y2={i%3===0?32:27} stroke={i%3===0?'#38bdf8':'#1E3A8A'} strokeWidth={i%3===0?2:1} transform={`rotate(${i*10} 140 140)`}/>)}
+
+                {/* Фоновая дорожка полосы шанса внутри круга */}
+                <circle
+                  cx="140"
+                  cy="140"
+                  r={radius}
+                  fill="none"
+                  stroke="rgba(15, 23, 42, 0.9)"
+                  strokeWidth="16"
+                />
+                <circle
+                  cx="140"
+                  cy="140"
+                  r={radius}
+                  fill="none"
+                  stroke="rgba(244, 63, 94, 0.16)"
+                  strokeWidth="14"
+                  strokeDasharray="4 6"
+                />
+
+                {/* ДИНАМИЧЕСКАЯ ЗАПОЛНЯЮЩАЯСЯ ПОЛОСА ШАНСА ВНУТРИ КРУГА */}
+                <circle
+                  cx="140"
+                  cy="140"
+                  r={radius}
+                  fill="none"
+                  stroke="url(#chanceBarGrad)"
+                  strokeWidth="14"
+                  strokeDasharray={`${winDash} ${circumference}`}
+                  strokeLinecap="butt"
+                  transform="rotate(-90 140 140)"
+                  filter="url(#glow)"
+                  style={{ transition: 'stroke-dasharray 0.55s cubic-bezier(0.22, 1, 0.36, 1)' }}
+                />
+
+                {/* Засечка старта сектора (0°) */}
+                <line x1="140" y1={140 - radius - 9} x2="140" y2={140 - radius + 9} stroke="#BAE6FD" strokeWidth="2.5" />
+
+                {/* Засечка конца сектора (поворачивается при смене шанса) */}
+                <g
+                  transform={`rotate(${chance * 360} 140 140)`}
+                  style={{ transition: 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)' }}
+                >
+                  <line x1="140" y1={140 - radius - 9} x2="140" y2={140 - radius + 9} stroke="#BAE6FD" strokeWidth="2.5" />
+                </g>
+
+                {/* Внутреннее ядро с процентом и мини-шкалой заполнения */}
+                <circle cx="140" cy="140" r="76" fill="rgba(59,130,246,.05)" stroke="rgba(56,189,248,.25)" strokeDasharray="3 6"/>
+                <circle cx="140" cy="140" r="65" fill="rgba(3,7,18,.92)" stroke="#3b82f6" strokeWidth="1.5"/>
+
+                <text x="140" y="122" textAnchor="middle" fill="#60A5FA" fontSize="9" fontFamily="Orbitron" letterSpacing="2">WIN ZONE</text>
+                <text x="140" y="149" textAnchor="middle" fill="white" fontSize="25" fontFamily="Chakra Petch" fontWeight="700">{pct}%</text>
+
+                {/* Горизонтальная полоса-индикатор шанса прямо внутри центрального круга */}
+                <rect x="102" y="159" width="76" height="6" rx="3" fill="rgba(30,58,138,0.55)" stroke="rgba(56,189,248,0.25)" strokeWidth="0.8" />
+                <rect
+                  x="102"
+                  y="159"
+                  width={Math.max(4, (76 * pct) / 100)}
+                  height="6"
+                  rx="3"
+                  fill="url(#chanceBarGrad)"
+                  filter="url(#glow)"
+                  style={{ transition: 'width 0.55s cubic-bezier(0.22, 1, 0.36, 1)' }}
+                />
+
+                {/* ВРАЩАЮЩАЯСЯ СТРЕЛОЧКА */}
+                <g transform={`rotate(${needle} 140 140)`}>
+                  <line x1="140" y1="65" x2="140" y2="30" stroke="#38bdf8" strokeWidth="2.5" filter="url(#glow)" />
+                  <path d="M140 14 L131 36 L140 31 L149 36 Z" fill="#d5ffbf" stroke="#38bdf8" strokeWidth="2" filter="url(#glow)"/>
+                </g>
+
+                <circle cx="140" cy="140" r="6" fill="#38bdf8" stroke="#d5ffbf" strokeWidth="2"/>
+              </svg>
+            </div>
+            <p className="text-[9px] text-zinc-500 tracking-[.2em] mt-2">CALIBRATED BRAINROT UPGRADER · 3.2S SPIN</p>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5 mt-4 relative">
+            {multipliers.map(([label])=><button key={label} onClick={()=>{if(spinning)return;setMult(label);setTarget(null);setOutcome(null);sound('click')}} className={`btn rounded-lg py-2 font-chakra font-bold text-sm border ${mult===label?'bg-neon text-black border-neon shadow-neon scale-105':'bg-black/50 border-blue-900 text-zinc-400 hover:text-sky-300'}`}>{label}</button>)}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="slot rounded-2xl p-3 min-w-0">
+            <div className="section-kicker text-[8px]">01 / ТВОЙ БРЕЙНРОТ</div>
+            {selected ? (
+              <button onClick={()=>!spinning && setSelected(null)} className="w-full mt-3 text-center">
+                <div className="item-orb h-24 text-4xl"><span className="item-emoji">{selected.emoji}</span></div>
+                <div className="font-orbitron text-[10px] mt-2 truncate">{selected.name}</div>
+                <div className="font-chakra text-sky-300 text-lg">{money(selected.value)} ◈</div>
+              </button>
+            ) : (
+              <div className="h-32 grid place-items-center text-center"><span className="text-3xl text-blue-900">＋</span><span className="text-[10px] text-zinc-500">Выбери предмет ниже</span></div>
+            )}
+          </div>
+          <div className="slot rounded-2xl p-3 min-w-0">
+            <div className="section-kicker text-[8px]">02 / ЦЕЛЬ АПГРЕЙДА</div>
+            {target ? (
+              <button onClick={()=>!spinning && setTarget(null)} className="w-full mt-3 text-center">
+                <div className="item-orb h-24 text-4xl"><span className="item-emoji">{target.emoji}</span></div>
+                <div className="font-orbitron text-[10px] mt-2 truncate">{target.name}</div>
+                <div className="font-chakra text-sky-300 text-lg">{money(target.value)} ◈</div>
+              </button>
+            ) : (
+              <div className="h-32 grid place-items-center text-center"><span className="text-3xl text-blue-900">◎</span><span className="text-[10px] text-zinc-500">Выбери цель ниже</span></div>
+            )}
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3"><span className="section-kicker">ТВОЙ ИНВЕНТАРЬ</span><span className="text-[10px] text-zinc-500">{inventory.length} ШТ.</span></div>
+          {inventory.length===0 ? (
+            <p className="text-xs text-zinc-500 py-4 text-center">Инвентарь пуст. Открой кейс, чтобы выбить брейнрота.</p>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {inventory.map(item=>(
+                <button key={item.id} disabled={spinning} onClick={()=>{setSelected(item);setTarget(null);setOutcome(null);sound('click')}} className={`btn min-w-[105px] max-w-[120px] rounded-xl p-2.5 border text-center ${selected?.id===item.id?'border-neon bg-blue-500/15 shadow-neon':'border-blue-900/60 bg-black/40'}`}>
+                  <div className="text-3xl item-emoji">{item.emoji}</div>
+                  <div className="text-[9px] font-orbitron truncate mt-1">{item.name}</div>
+                  <div className="font-chakra text-xs text-sky-300">{money(item.value)} ◈</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {selected && (
+          <div className="glass rounded-2xl p-4">
+            <div className="section-kicker mb-3">ДОСТУПНЫЕ БРЕЙНРОТЫ ДЛЯ АПГРЕЙДА</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {possibleTargets.map(item => (
+                <button key={item.id} disabled={spinning} onClick={()=>chooseTarget(item)} className={`btn rounded-xl border p-2.5 text-center ${target?.id===item.id?'border-neon bg-blue-500/15 shadow-neon':'border-blue-900/60 bg-black/35'}`}>
+                  <div className="text-2xl">{item.emoji}</div>
+                  <div className="text-[10px] font-orbitron truncate mt-1">{item.name}</div>
+                  <div className="mt-1"><RarityBadge rarity={item.rarity} small /></div>
+                  <div className="font-chakra text-xs text-sky-300 mt-1">{money(item.value)} ◈</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <ActionButton className="w-full py-4 text-sm" disabled={!selected||!target||spinning} onClick={runUpgrade}>
+          {spinning ? 'КРУТИМ СТРЕЛКУ...' : `ПРОКАЧАТЬ ДО ${target ? target.name.toUpperCase() : '...'} ↗ (${pct}%)`}
+        </ActionButton>
+
+        {outcome && (
+          <div className={`glass rounded-2xl p-4 text-center ${outcome.win?'border-neon/70':'border-rose-500/50'}`}>
+            <div className="text-4xl">{outcome.win?'🎉':'💥'}</div>
+            <div className={`font-orbitron font-bold mt-2 ${outcome.win?'text-sky-300':'text-rose-300'}`}>{outcome.win?'АПГРЕЙД УСПЕШЕН!':'БРЕЙНРОТ СГОРЕЛ'}</div>
+            <p className="text-xs text-zinc-400 mt-1">{outcome.win?`Ты получил ${outcome.item.name} (${money(outcome.item.value)} ◈)!`:`${outcome.item.name} не пережил апгрейд.`}</p>
+          </div>
+        )}
+        {flash==='win'&&<div className="flash-win"/>}{flash==='lose'&&<div className="flash-lose"/>}
+      </div>
+    }
+
+    function AnimatedNumber({value}){const [n,setN]=useState(0);useEffect(()=>{let start=performance.now(),duration=650;function step(t){let p=Math.min(1,(t-start)/duration);setN(Math.round(value*(1-Math.pow(1-p,4))));if(p<1)requestAnimationFrame(step)}requestAnimationFrame(step)},[value]);return <span>{money(n)}</span>}
+
+    function ProfileTab(){
+      const {user,inventory,setInventory,setBalance,removeItem,updateUser,logout,role}=useGame();
+      const [selling,setSelling]=useState(false);
+      const [notice,setNotice]=useState('');
+
+      function sellSingle(item) {
+        removeItem(item.id);
+        setBalance(b => b + item.value);
+        sound('win');
+        setNotice(`Продано: ${item.name} (+${money(item.value)} ◈)`);
+        setTimeout(() => setNotice(''), 2000);
+      }
+
+      function sellAll(){
+        if(!inventory.length||selling)return;
+        setSelling(true);
+        const total=inventory.reduce((s,i)=>s+i.value,0);
+        for(let i=0;i<22;i++){
+          const el=document.createElement('div');
+          el.className='coin';
+          el.textContent=['◈','🪙','●'][i%3];
+          el.style.left=Math.random()*100+'vw';
+          el.style.top=(-20-Math.random()*100)+'px';
+          el.style.fontSize=(14+Math.random()*22)+'px';
+          el.style.color='#93C5FD';
+          document.body.appendChild(el);
+          setTimeout(()=>el.remove(),1400);
+        }
+        setTimeout(()=>{
+          setBalance(b=>b+total);
+          setInventory([]);
+          setSelling(false);
+          setNotice(`+${money(total)} ◈ зачислено на баланс`);
+          sound('win');
+          setTimeout(()=>setNotice(''),2400);
+        },600);
+      }
+
+      const bestDrop = inventory.length ? Math.max(...inventory.map(i => i.value)) : 0;
+
+      return <div className="tab-enter space-y-5">
+        <div className="flex items-end justify-between"><div><div className="section-kicker">PLAYER ID / 001</div><h1 className="font-orbitron text-2xl font-black mt-1">ПРОФИЛЬ<span className="text-sky-300">_</span></h1></div><span className="border border-blue-500/30 rounded-lg px-2 py-1 text-[9px] text-blue-300">ONLINE ●</span></div>
+        <div className="glass rounded-3xl p-5 relative overflow-hidden">
+          <div className="relative flex flex-wrap items-center gap-2 mb-4"><span className="text-[9px] text-zinc-500 tracking-widest">АВАТАР:</span>{['🐊','🦈','👾','🐸','🍕','🥷','🐉','🤖'].map(a=><button key={a} onClick={()=>updateUser({avatar:a,avatarData:null})} className={`rounded-lg border px-2 py-1 text-lg ${user.avatar===a?'border-sky-400 bg-blue-500/20':'border-blue-900/60'}`}>{a}</button>)}<button onClick={logout} className="ml-auto text-[9px] text-rose-300 border border-rose-500/30 rounded-lg px-3 py-2">ВЫЙТИ</button></div>
+          <div className="absolute -right-6 -top-8 text-[130px] opacity-[.06]">◉</div>
+          <div className="flex gap-4 items-center relative">
+            <div className="avatar-pulse w-[76px] h-[76px] rounded-2xl bg-gradient-to-br from-blue-800/70 to-black grid place-items-center text-4xl overflow-hidden relative shrink-0">{user.avatar}</div>
+            <div className="min-w-0 flex-1">
+              <div className="section-kicker flex items-center gap-1.5">
+                <span>STEAL A VERT1X COLLECTOR</span>
+                {user.verified && <span className="text-[9px] text-sky-300 font-bold">· VERIFIED</span>}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <input aria-label="Имя игрока" value={user.name} onChange={e=>updateUser({name:e.target.value.slice(0,24)})} className="font-orbitron font-bold text-lg truncate bg-transparent border-b border-blue-500/30 w-full outline-none"/>
+                {user.verified && <VerifiedBadge className="w-5 h-5" />}
+              </div>
+              <p className="font-chakra text-xs text-zinc-500 mt-1">ID: {user.id} <button className="text-blue-300 ml-1" onClick={()=>{navigator.clipboard?.writeText(String(user.id));setNotice('ID скопирован');setTimeout(()=>setNotice(''),1400)}}>⧉</button></p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="text-[8px] border border-blue-500/30 rounded px-2 py-1 text-blue-300">BRAINROT HUNTER</span>
+                {user.verified && <span className="text-[8px] border border-sky-400/50 bg-sky-500/15 rounded px-2 py-1 text-sky-200 font-bold">✓ ПОДТВЕРЖДЁН</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="glass rounded-2xl p-3"><div className="text-[8px] text-zinc-500 tracking-wider">СТОИМОСТЬ БАЗЫ</div><div className="font-chakra font-bold text-xl text-sky-300 mt-2"><AnimatedNumber value={inventory.reduce((s,i)=>s+i.value,0)}/></div><div className="text-[8px] text-zinc-600">◈ COINS</div></div>
+          <div className="glass rounded-2xl p-3"><div className="text-[8px] text-zinc-500 tracking-wider">ПРЕДМЕТОВ</div><div className="font-chakra font-bold text-xl text-sky-300 mt-2"><AnimatedNumber value={inventory.length}/></div><div className="text-[8px] text-zinc-600">В ИНВЕНТАРЕ</div></div>
+          <div className="glass rounded-2xl p-3"><div className="text-[8px] text-zinc-500 tracking-wider">ЛУЧШИЙ ДРОП</div><div className="font-chakra font-bold text-xl text-sky-300 mt-2"><AnimatedNumber value={bestDrop}/></div><div className="text-[8px] text-zinc-600">◈ VALUE</div></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2"><a href="https://t.me/pavelzedurov" target="_blank" rel="noopener noreferrer" className="btn rounded-xl py-3 text-center border border-sky-400/40 bg-sky-500/10 text-sky-200 font-orbitron text-[10px]">ВЫВОД · @pavelzedurov</a><button onClick={()=>window.dispatchEvent(new Event('open-wallet'))} className="btn rounded-xl py-3 border border-blue-500/30 text-blue-200 font-orbitron text-[10px]">ПОПОЛНИТЬ БАЛАНС</button></div>
+        {role!=='player'&&<button onClick={()=>window.dispatchEvent(new Event('open-admin'))} className="w-full btn rounded-xl py-3 border border-amber-400/40 text-amber-200 font-orbitron text-[10px]">ОТКРЫТЬ АДМИН-ПАНЕЛЬ</button>}
+
+        <section>
+          <SectionTitle eyebrow="YOUR BRAINROTS" title="ИНВЕНТАРЬ" right={<span className="font-chakra text-sm text-zinc-500">{inventory.length} шт.</span>}/>
+          {inventory.length ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {inventory.map(item => (
+                <div key={item.id} className="glass rounded-2xl p-3 text-center item-orb min-w-0 flex flex-col justify-between">
+                  <div className="flex justify-center"><RarityBadge rarity={item.rarity} small /></div>
+                  <div className="text-4xl py-3 item-emoji">{item.emoji}</div>
+                  <div>
+                    <div className="font-orbitron font-bold text-[10px] truncate" title={item.name}>{item.name}</div>
+                    <div className="font-chakra text-sm text-sky-300 mt-1">{money(item.value)} ◈</div>
+                    <button
+                      onClick={() => sellSingle(item)}
+                      className="mt-2 w-full py-1.5 rounded-lg border border-blue-500/30 bg-black/50 text-[9px] font-orbitron text-blue-300 hover:bg-blue-500/20 transition"
+                    >
+                      ПРОДАТЬ
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass rounded-2xl p-8 text-center"><div className="text-4xl">🫙</div><p className="text-xs text-zinc-500 mt-3">Пока пусто. Открой любой кейс и выбей своего брейнрота.</p></div>
+          )}
+        </section>
+
+        <ActionButton className="w-full py-4" variant="ghost" disabled={!inventory.length||selling} onClick={sellAll}>
+          {selling ? 'СОБИРАЕМ МОНЕТЫ...' : `ПРОДАТЬ ВСЕХ БРЕЙНРОТОВ · ${money(inventory.reduce((s,i)=>s+i.value,0))} ◈`}
+        </ActionButton>
+        {notice && <div className="glass rounded-xl p-3 text-center text-sm text-sky-300">{notice}</div>}
+      </div>
+    }
+
+    function Deposit({onClose}){
+      const {user}=useGame();
+      const [tab,setTab]=useState('stars'); const [code,setCode]=useState(''); const [status,setStatus]=useState(''); const [busy,setBusy]=useState(false);
+      async function redeem(){
+        if(!code.trim()) {setStatus('ВВЕДИ ПРОМОКОД');return;}
+        setBusy(true);setStatus('');
+        try {
+          const {data,error}=await supabase.rpc('redeem_promo',{p_code:code.trim().toUpperCase()});
+          if(error) throw error;
+          setStatus(`ПРОМОКОД АКТИВИРОВАН · +${Number(data?.coins||0).toLocaleString('ru-RU')} ◈`);
+          window.dispatchEvent(new Event('cloud-refresh-balance'));
+        } catch(e){setStatus(e.message?.includes('already')||e.message?.includes('актив')?'ЭТОТ ПРОМОКОД УЖЕ ИСПОЛЬЗОВАН':'ПРОМОКОД НЕ ПОДОШЁЛ: '+(e.message||'ошибка'));}
+        finally{setBusy(false);}
+      }
+      return <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-end justify-center" onClick={onClose}><div className="bottom-sheet glass rounded-t-3xl w-full max-w-xl p-5 pb-8" onClick={e=>e.stopPropagation()}><div className="w-10 h-1 rounded-full bg-blue-700/70 mx-auto mb-5"></div><div className="flex justify-between items-start"><div><div className="section-kicker">WALLET / TOP-UP</div><h2 className="font-orbitron font-bold text-xl mt-1">ПОПОЛНЕНИЕ БАЛАНСА</h2></div><button className="text-zinc-500 text-2xl" onClick={onClose}>×</button></div>
+        <div className="grid grid-cols-2 gap-2 mt-5">{[['stars','✦ Telegram Stars'],['promo','Промокод']].map(([id,label])=><button key={id} onClick={()=>{setTab(id);setStatus('')}} className={`btn rounded-xl py-3 text-[10px] font-orbitron border ${tab===id?'border-neon bg-blue-500/15 text-sky-300':'border-blue-900/60 text-zinc-500'}`}>{label}</button>)}</div>
+        {tab==='promo'?<div className="mt-5"><label className="text-[10px] text-zinc-500 tracking-widest">ПРОМОКОД</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="ВВЕДИ КОД" className="w-full mt-2 bg-black/50 border border-blue-800 rounded-xl p-3 text-sm outline-none focus:border-neon font-chakra uppercase"/></div>:<div className="mt-5 glass rounded-xl p-4"><p className="text-sm text-sky-200 font-bold">1 Telegram Star = 50 монет</p><p className="text-xs text-zinc-400 mt-2">Покупка проходит в Telegram-боте <b>@brainrotdrop_robot</b>. Напиши боту команду /buy и укажи свой игровой ID: <b>{user.id}</b>.</p><a href="https://t.me/brainrotdrop_robot" target="_blank" rel="noopener noreferrer" className="block mt-4 text-center rounded-xl py-3 bg-sky-500 text-black font-orbitron text-xs font-bold">ОТКРЫТЬ @BRAINROTDROP_ROBOT</a></div>}
+        {status&&<div className={`mt-4 rounded-xl p-3 text-xs text-center ${status.includes('НЕ')||status.includes('УЖЕ')?'text-rose-300 bg-rose-500/5':'text-sky-300 bg-blue-500/5'}`}>{status}</div>}
+        {tab==='promo'&&<ActionButton className="w-full mt-5 py-4" disabled={busy} onClick={redeem}>{busy?'ПРОВЕРКА...':'АКТИВИРОВАТЬ ПРОМОКОД'}</ActionButton>}
+      </div></div>
+    }
+
+    function LeaderboardsTab(){
+      const [mode,setMode]=useState('coins');const [rows,setRows]=useState([]);const [err,setErr]=useState('');
+      const [verifiedIds, setVerifiedIds] = useState({});
+      useEffect(()=>{
+        let live=true;
+        (async()=>{
+          const {data,error}=await supabase.rpc('get_leaderboard',{p_metric:mode});
+          if(!live)return;
+          if(error)setErr(error.message);
+          else{
+            setErr('');
+            setRows(data||[]);
+            const ids = (data||[]).map(r => r.user_id).filter(Boolean);
+            if (ids.length) {
+              const {data: profs} = await supabase.from('profiles').select('user_id,verified').in('user_id', ids);
+              if (live && profs) {
+                const map = {};
+                profs.forEach(p => { if (p.verified) map[p.user_id] = true; });
+                setVerifiedIds(map);
+              }
+            }
+          }
+        })();
+        return()=>{live=false}
+      },[mode]);
+      return <div className="tab-enter space-y-4"><SectionTitle eyebrow="GLOBAL RANKING" title="ЛИДЕРБОРД"/><div className="grid grid-cols-2 gap-2">{[['coins','◈ МОНЕТЫ'],['cases','▦ ОТКРЫТИЯ КЕЙСОВ']].map(([v,l])=><button key={v} onClick={()=>setMode(v)} className={`btn rounded-xl py-3 border text-[10px] font-orbitron ${mode===v?'border-neon bg-sky-500/10 text-sky-200':'border-blue-900/60 text-zinc-500'}`}>{l}</button>)}</div>{err?<p className="glass p-4 rounded-xl text-xs text-rose-300">Не удалось загрузить рейтинг. Примените SQL-миграцию.</p>:<div className="glass rounded-2xl p-3 space-y-2">{rows.length?rows.map((r,i)=><div key={r.user_id||i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[.03]"><span className="font-orbitron text-sm text-sky-300 w-7">#{i+1}</span><span className="flex-1 truncate text-sm flex items-center gap-1.5"><span>{r.username||'Player'}</span>{(r.verified || verifiedIds[r.user_id]) && <VerifiedBadge className="w-4 h-4"/>}</span><b className="font-chakra text-sky-200">{Number(r.score||0).toLocaleString('ru-RU')}</b></div>):<p className="text-center text-xs text-zinc-500 p-6">Рейтинг пока пуст</p>}</div>}</div>
+    }
+
+    // ============================================================================
+    // АДМИН-ПАНЕЛЬ С ВЫДАЧЕЙ И СНЯТИЕМ ГАЛОЧКИ (VERIFIED)
+    // ============================================================================
+    function AdminPanel(){
+      const {role, user, updateUser}=useGame();
+      const [kind,setKind]=useState('promo');
+      const [code,setCode]=useState('');
+      const [coins,setCoins]=useState('500');
+      const [uses,setUses]=useState('1');
+      const [target,setTarget]=useState('');
+      const [targetRole,setTargetRole]=useState('moderator');
+      const [reason,setReason]=useState('');
+      const [message,setMessage]=useState('');
+      const [busy,setBusy]=useState(false);
+
+      async function act(){
+        setBusy(true);
+        setMessage('');
+        try {
+          if (kind === 'verify' || kind === 'unverify') {
+            const isVerifying = kind === 'verify';
+            const cleanTarget = target.trim();
+            if (!cleanTarget) throw new Error('Укажи игровой ID (например VX-...)');
+
+            const {data, error} = await supabase.rpc('admin_set_verified', {
+              p_user_id: cleanTarget,
+              p_verified: isVerifying
+            });
+
+            if (error) {
+              const {error: updError} = await supabase
+                .from('profiles')
+                .update({ verified: isVerifying })
+                .eq('user_id', cleanTarget);
+              if (updError) throw error;
+            }
+
+            if (cleanTarget === user.id) {
+              updateUser({ verified: isVerifying });
+            }
+
+            setMessage(data ? `Готово: ${data}` : (isVerifying ? `Галочка (Verified) выдана игроку ${cleanTarget}` : `Галочка снята у игрока ${cleanTarget}`));
+            setBusy(false);
+            return;
+          }
+
+          let rpc, args;
+          if(kind==='promo'){
+            rpc='admin_create_promo';
+            args={p_code:code.trim().toUpperCase(),p_coins:Number(coins),p_max_uses:Number(uses)};
+          } else if(kind==='grant'){
+            rpc='admin_grant_coins';
+            args={p_user_id:target.trim(),p_coins:Number(coins),p_reason:reason||'Admin grant'};
+          } else if(kind==='ban'){
+            rpc='admin_set_ban';
+            args={p_user_id:target.trim(),p_banned:true,p_reason:reason||'Нарушение правил'};
+          } else if(kind==='unban'){
+            rpc='admin_set_ban';
+            args={p_user_id:target.trim(),p_banned:false,p_reason:reason||'Разблокировка'};
+          } else {
+            rpc='admin_set_role';
+            args={p_user_id:target.trim(),p_role:targetRole};
+          }
+          const {data,error}=await supabase.rpc(rpc,args);
+          if(error)throw error;
+          setMessage('Готово: '+(typeof data==='string'?data:JSON.stringify(data)));
+        } catch(e) {
+          setMessage('Ошибка: '+(e.message||'действие отклонено'));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      return <div className="tab-enter space-y-4">
+        <SectionTitle eyebrow={`SECURE CONSOLE · ${role.toUpperCase()}`} title="АДМИН-ПАНЕЛЬ"/>
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs text-amber-200 mb-3">Все действия проверяются базой данных. Не выдавайте никому пароль владельца или ключ service_role.</p>
+          <label className="text-[10px] text-zinc-500">ДЕЙСТВИЕ</label>
+          <select value={kind} onChange={e=>setKind(e.target.value)} className="w-full mt-1 mb-4 bg-black border border-blue-900 rounded-xl p-3 text-sm">
+            <option value="promo">Создать промокод</option>
+            <option value="grant">Выдать монеты</option>
+            <option value="verify">✓ Выдать галочку (Verified)</option>
+            <option value="unverify">✕ Снять галочку (Verified)</option>
+            <option value="ban">Заблокировать игрока</option>
+            <option value="unban">Разблокировать игрока</option>
+            <option value="role">Назначить / снять младшую админку</option>
+          </select>
+
+          {kind==='promo' ? (
+            <>
+              <label className="text-[10px] text-zinc-500">КОД (латиница/цифры)</label>
+              <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="VERT1X500" className="w-full mt-1 mb-3 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+              <label className="text-[10px] text-zinc-500">МОНЕТ ЗА АКТИВАЦИЮ</label>
+              <input type="number" min="1" value={coins} onChange={e=>setCoins(e.target.value)} className="w-full mt-1 mb-3 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+              <label className="text-[10px] text-zinc-500">МАКСИМУМ АКТИВАЦИЙ НА ВСЕХ ИГРОКОВ</label>
+              <input type="number" min="1" value={uses} onChange={e=>setUses(e.target.value)} className="w-full mt-1 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] text-zinc-500">ID ИГРОКА (например VX-...)</label>
+                <button type="button" onClick={()=>setTarget(user.id)} className="text-[10px] text-sky-400 hover:underline">Подставить мой ID ({user.id})</button>
+              </div>
+              <input value={target} onChange={e=>setTarget(e.target.value)} placeholder="VX-..." className="w-full mt-1 mb-3 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+              {kind==='grant' && (
+                <>
+                  <label className="text-[10px] text-zinc-500">КОЛИЧЕСТВО МОНЕТ</label>
+                  <input type="number" min="1" value={coins} onChange={e=>setCoins(e.target.value)} className="w-full mt-1 mb-3 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+                </>
+              )}
+              {kind==='role' && (
+                <>
+                  <label className="text-[10px] text-zinc-500">РОЛЬ</label>
+                  <select value={targetRole} onChange={e=>setTargetRole(e.target.value)} className="w-full mt-1 mb-3 bg-black border border-blue-900 rounded-xl p-3 text-sm">
+                    <option value="player">Снять админку</option>
+                    <option value="moderator">Младший администратор</option>
+                  </select>
+                </>
+              )}
+              {(kind==='verify' || kind==='unverify') && (
+                <div className="mb-3 p-3 rounded-xl border border-sky-500/30 bg-sky-500/10 flex items-center gap-2.5 text-xs text-sky-200">
+                  <VerifiedBadge className="w-5 h-5" />
+                  <span>{kind==='verify' ? 'Игрок получит неоновую галочку рядом с ником в профиле, шапке и топе.' : 'Галочка верификации будет убрана с профиля игрока.'}</span>
+                </div>
+              )}
+              <label className="text-[10px] text-zinc-500">ПРИЧИНА / КОММЕНТАРИЙ</label>
+              <input value={reason} onChange={e=>setReason(e.target.value)} placeholder="Причина действия" className="w-full mt-1 bg-black border border-blue-900 rounded-xl p-3 text-sm"/>
+            </>
+          )}
+          <ActionButton className="w-full mt-4 py-4" disabled={busy} onClick={act}>{busy?'ВЫПОЛНЯЕТСЯ...':'ВЫПОЛНИТЬ ДЕЙСТВИЕ'}</ActionButton>
+          {message&&<p className="text-xs text-sky-200 mt-3 break-words">{message}</p>}
+        </div>
+        <p className="text-[10px] text-zinc-600">Роль владельца закреплена за игровым ID VX-72FE8C3E54. Младшие администраторы не могут менять роли и банить/разбанивать других администраторов.</p>
+      </div>
+    }
+
+    const SESSION_KEY = 'vertix_drop_session_v1';
+
+    async function loadCloudAccount(authUser) {
+      if (!authUser) return null;
+      let { data: profile, error: profileError } = await supabase
+        .from('profiles').select('*').eq('id', authUser.id).maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile) {
+        const username = authUser.user_metadata?.username || authUser.email?.split('@')[0] || 'Player';
+        const created = await supabase.from('profiles').insert({id:authUser.id, username}).select('*').single();
+        if (created.error) throw created.error;
+        profile = created.data;
+      }
+      let { data: save, error: saveError } = await supabase
+        .from('player_saves').select('balance,inventory').eq('user_id', authUser.id).maybeSingle();
+      if (saveError) throw saveError;
+      if (!save) {
+        const initial = {user_id:authUser.id, balance:1500, inventory:initialInventory};
+        const createdSave = await supabase.from('player_saves').insert(initial).select('balance,inventory').single();
+        if (createdSave.error) throw createdSave.error;
+        save = createdSave.data;
+      }
+      const {data:access,error:accessError}=await supabase.rpc('get_my_access');
+      if(accessError) throw accessError;
+      if(access?.banned){await supabase.auth.signOut();throw new Error('Аккаунт заблокирован. Обратитесь к администрации.');}
+      return {
+        role: access?.role || 'player',
+        authUserId: authUser.id,
+        user: {
+          name: profile.username || 'Player',
+          email: authUser.email || '',
+          id: profile.user_id,
+          verified: Boolean(profile.verified),
+          avatar: (profile.avatar_url && !/^https?:\/\//i.test(profile.avatar_url) ? profile.avatar_url : '🐊'),
+          avatarUrl: (/^https?:\/\//i.test(profile.avatar_url || '') ? profile.avatar_url : null)
+        },
+        balance: Number(save.balance ?? 1500),
+        inventory: Array.isArray(save.inventory) ? save.inventory : initialInventory
+      };
+    }
+
+    function AuthGate({onAuth}){
+      const [mode,setMode]=useState('register'); const [email,setEmail]=useState(''); const [name,setName]=useState(''); const [password,setPassword]=useState(''); const [error,setError]=useState(''); const [busy,setBusy]=useState(false); const [message,setMessage]=useState('');
+      async function submit(e){
+        e.preventDefault(); setError(''); setMessage(''); setBusy(true);
+        const mail=email.trim().toLowerCase();
+        if(!mail||!password){setError('Заполни почту и пароль.');setBusy(false);return;}
+        if(password.length<6){setError('Пароль должен быть не короче 6 символов.');setBusy(false);return;}
+        try {
+          if(mode==='register') {
+            const {data,error:authError}=await supabase.auth.signUp({email:mail,password,options:{data:{username:name.trim()||mail.split('@')[0]}}});
+            if(authError) throw authError;
+            if(!data.session) { setMessage('Аккаунт создан. Проверь почту и подтверди адрес, затем войди.'); setMode('login'); setBusy(false); return; }
+            const acc=await loadCloudAccount(data.user); onAuth(acc);
+          } else {
+            const {data,error:authError}=await supabase.auth.signInWithPassword({email:mail,password});
+            if(authError) throw authError;
+            const acc=await loadCloudAccount(data.user); onAuth(acc);
+          }
+        } catch(err) { setError(err?.message || 'Не удалось выполнить вход. Проверь настройки Supabase.'); }
+        finally { setBusy(false); }
+      }
+      return <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl grid place-items-center p-4"><form onSubmit={submit} className="glass rounded-3xl p-6 w-full max-w-md"><div className="text-center mb-5"><div className="mx-auto mb-3 grid place-items-center w-14 h-14 rounded-2xl bg-blue-500/15 border border-sky-400/40 text-3xl">◈</div><div className="section-kicker">VERT1X DROP ACCOUNT</div><h1 className="font-orbitron font-black text-xl mt-2">{mode==='register'?'СОЗДАТЬ АККАУНТ':'ВХОД В АККАУНТ'}</h1><p className="text-xs text-zinc-500 mt-2">Аккаунт и уникальный User ID сохраняются в облаке</p></div>
+        {mode==='register'&&<input value={name} onChange={e=>setName(e.target.value)} placeholder="Имя игрока" maxLength="24" className="w-full mb-3 rounded-xl bg-black/50 border border-blue-900 p-3 text-sm outline-none focus:border-sky-400"/>}
+        <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="Электронная почта" autoComplete="email" className="w-full mb-3 rounded-xl bg-black/50 border border-blue-900 p-3 text-sm outline-none focus:border-sky-400"/>
+        <input type="password" required minLength="6" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Пароль (минимум 6 символов)" autoComplete={mode==='register'?'new-password':'current-password'} className="w-full rounded-xl bg-black/50 border border-blue-900 p-3 text-sm outline-none focus:border-sky-400"/>
+        {error&&<p className="text-rose-300 text-xs mt-3">{error}</p>}{message&&<p className="text-sky-300 text-xs mt-3">{message}</p>}
+        <button disabled={busy} type="submit" className="btn w-full mt-4 rounded-xl p-3 bg-gradient-to-r from-blue-500 to-sky-300 text-black font-orbitron font-bold text-xs">{busy?'ПОДОЖДИ...':mode==='register'?'ЗАРЕГИСТРИРОВАТЬСЯ':'ВОЙТИ'}</button>
+        <button type="button" disabled={busy} onClick={()=>{setMode(mode==='register'?'login':'register');setError('');setMessage('')}} className="w-full mt-4 text-xs text-sky-300">{mode==='register'?'Уже есть аккаунт? Войти':'Нет аккаунта? Зарегистрироваться'}</button>
+        <p className="text-[10px] leading-relaxed text-zinc-600 text-center mt-4">Пароли обрабатывает Supabase Auth. Для регистрации может потребоваться подтверждение почты.</p>
+      </form></div>
+    }
+
+    function App(){
+      const [active,setActive]=useState('cases');
+      const [account,setAccount]=useState(null);
+      const [balance,setBalance]=useState(1500);
+      const [inventory,setInventory]=useState(initialInventory);
+      const [deposit,setDeposit]=useState(false);
+      const [user,setUser]=useState({name:'',id:'',avatar:'🐊',verified:false});
+      const [avatarData,setAvatarData]=useState(null);
+      const [role,setRole]=useState('player');
+      const [authLoading,setAuthLoading]=useState(true);
+      const [toast,setToast]=useState('');
+      const nextId=useRef(500);
+      const saveTimer=useRef(null);
+
+      const addItem=item=>setInventory(prev=>[{...item,id:nextId.current++},...prev]);
+      function handleAuth(acc){setAccount(acc);setUser(acc.user);setBalance(acc.balance??1500);setInventory(acc.inventory??initialInventory);setAvatarData(null);setRole(acc.role||'player');}
+      async function logout(){await supabase.auth.signOut();setAccount(null);setUser({name:'',id:'',avatar:'🐊',verified:false});setBalance(1500);setInventory(initialInventory);setActive('cases');}
+      function updateUser(patch){setUser(prev=>({...prev,...patch}));}
+      useEffect(()=>{
+        let alive=true;
+        (async()=>{
+          try { const {data,error}=await supabase.auth.getSession(); if(error) throw error;
+            if(data.session?.user){const acc=await loadCloudAccount(data.session.user);if(alive)handleAuth(acc);}
+          } catch(err){console.error('Supabase session/profile load:',err);if(alive)setToast('Не удалось загрузить профиль: '+(err?.message||'ошибка'));}
+          finally {if(alive)setAuthLoading(false);}
+        })();
+        const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
+          if(event==='SIGNED_OUT'&&alive){setAccount(null);setUser({name:'',id:'',avatar:'🐊',verified:false});}
+        });
+        return()=>{alive=false;subscription.unsubscribe();};
+      },[]);
+      useEffect(()=>{
+        if(!account?.authUserId)return;
+        if(saveTimer.current)clearTimeout(saveTimer.current);
+        saveTimer.current=setTimeout(async()=>{
+          const {error}=await supabase.from('player_saves').upsert({user_id:account.authUserId,balance,inventory,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+          if(error)console.error('Cloud save failed:',error);
+        },500);
+        return()=>{if(saveTimer.current)clearTimeout(saveTimer.current);};
+      },[account?.authUserId,balance,inventory]);
+      useEffect(()=>{
+        if(!account?.authUserId)return;
+        const patch={username:user.name||'Player',avatar_url:user.avatarUrl||user.avatar||null};
+        supabase.from('profiles').update(patch).eq('id',account.authUserId).then(({error})=>{if(error)console.error('Profile save failed:',error);});
+      },[account?.authUserId,user.name,user.avatarUrl,user.avatar]);
+      const removeItem=id=>setInventory(prev=>prev.filter(i=>i.id!==id));
+
+      useEffect(()=>{
+        const konami=['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];let seq=[];
+        const key=e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();seq.push(e.key.length===1?e.key.toLowerCase():e.key);seq=seq.slice(-10);if(seq.join('|')===konami.join('|')){window.dispatchEvent(new CustomEvent('matrix-mode',{detail:!document.body.classList.contains('matrix')}));seq=[];setToast(document.body.classList.contains('matrix')?'MATRIX MODE OFF':'MATRIX MODE // ENABLED');setTimeout(()=>setToast(''),2200);sound('open')}};
+        const runner=()=>{const el=document.createElement('div');el.className='runner';el.textContent='🚽';document.body.appendChild(el);setTimeout(()=>el.remove(),3300)};
+        const promo=()=>{setBalance(b=>b+250);setToast('SECRET DROP FOUND · +250 ◈');sound('win');setTimeout(()=>setToast(''),2600)};
+        const redeemed=()=>{setToast('PROMO APPLIED · +500 ◈');setTimeout(()=>setToast(''),2000)};
+        window.addEventListener('keydown',key);window.addEventListener('brainrot-runner',runner);window.addEventListener('secret-promo',promo);window.addEventListener('promo-redeemed',redeemed);
+        return()=>{window.removeEventListener('keydown',key);window.removeEventListener('brainrot-runner',runner);window.removeEventListener('secret-promo',promo);window.removeEventListener('promo-redeemed',redeemed)};
+      },[]);
+
+      useEffect(()=>{const wallet=()=>setDeposit(true);const admin=()=>setActive('admin');const refresh=async()=>{if(!account?.authUserId)return;const {data}=await supabase.from('player_saves').select('balance,inventory').eq('user_id',account.authUserId).maybeSingle();if(data){setBalance(Number(data.balance||0));setInventory(Array.isArray(data.inventory)?data.inventory:[]);}};window.addEventListener('open-wallet',wallet);window.addEventListener('open-admin',admin);window.addEventListener('cloud-refresh-balance',refresh);return()=>{window.removeEventListener('open-wallet',wallet);window.removeEventListener('open-admin',admin);window.removeEventListener('cloud-refresh-balance',refresh)}},[account?.authUserId]);
+      const value={balance,setBalance,inventory,setInventory,addItem,removeItem,user,updateUser,logout,role,account};
+      if(authLoading) return <div className="fixed inset-0 bg-black grid place-items-center text-sky-300 font-orbitron text-xs">VERT1X DROP · ПОДКЛЮЧЕНИЕ К БАЗЕ...</div>;
+      if(!account) return <AuthGate onAuth={handleAuth}/>;
+      return <GameContext.Provider value={value}><div className="app-shell min-h-screen">
+        <Header onDeposit={()=>setDeposit(true)}/>
+        <main className="main-content px-4 pt-2 pb-32">
+          <div className="flex items-center gap-2 mb-5 text-[9px] tracking-[.17em] text-zinc-500 font-chakra"><span className="w-1.5 h-1.5 rounded-full bg-neon shadow-neon"></span> STEAL A VERT1X ENGINE <span className="text-zinc-800">/</span> BUILD 2.0 <span className="ml-auto">89 BRAINROTS LOADED</span></div>
+          {active==='cases'&&<CasesTab/>}{active==='upgrade'&&<UpgradeTab/>}{active==='profile'&&<ProfileTab/>}{active==='leaderboard'&&<LeaderboardsTab/>}{active==='admin'&&role!=='player'&&<AdminPanel/>}
+          <FooterDisclaimer />
+        </main>
+        <BottomNav active={active} setActive={setActive} isAdmin={role!=='player'}/>
+        {deposit&&<Deposit onClose={()=>setDeposit(false)}/>}
+        {toast&&<div className="fixed top-24 left-1/2 -translate-x-1/2 z-[70] glass rounded-xl px-4 py-3 text-center text-[10px] font-orbitron text-sky-300 whitespace-nowrap">{toast}</div>}
+      </div></GameContext.Provider>
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
