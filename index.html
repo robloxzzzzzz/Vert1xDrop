@@ -621,6 +621,32 @@ function Auth({onAuth}){
   </form></div>;
 }
 
+function RebrandNotice(){
+  const [open,setOpen]=useState(()=>{try{return sessionStorage.getItem('sakura_rebrand_notice')!=='1'}catch(e){return true}});
+  function close(){try{sessionStorage.setItem('sakura_rebrand_notice','1')}catch(e){}setOpen(false)}
+  if(!open)return null;
+  return <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={close}>
+    <div className="glass rounded-3xl p-5 sm:p-6 w-full max-w-md bottom-sheet my-auto" style={{border:'1px solid rgba(244,114,182,.5)',boxShadow:'0 0 40px rgba(244,114,182,.25)'}} onClick={e=>e.stopPropagation()}>
+      <div className="text-center">
+        <div className="mx-auto mb-3 grid place-items-center w-14 h-14 rounded-2xl text-3xl" style={{background:'rgba(244,114,182,.15)',border:'1px solid rgba(244,114,182,.45)'}}>🌸</div>
+        <div className="kick">ВАЖНОЕ УВЕДОМЛЕНИЕ</div>
+        <h2 className="font-orbitron font-black text-xl mt-2 leading-tight">РЕБРЕНДИНГ<br/><span className="text-pink-300">SAKURA DROP</span></h2>
+      </div>
+      <p className="text-sm text-zinc-300 mt-4 leading-relaxed text-center">Наш сайт сменил название и стиль: теперь это <b className="text-pink-300">Sakura Drop</b> для игры <b className="text-pink-300">Steal a Sakura</b>.</p>
+      <div className="mt-4 rounded-2xl p-3.5 text-center" style={{background:'rgba(244,63,94,.12)',border:'1px solid rgba(244,63,94,.55)'}}>
+        <div className="font-orbitron font-bold text-[10px] tracking-widest text-rose-300">⚠ ВАЖНО</div>
+        <p className="text-sm font-bold text-white mt-1.5 leading-snug">Сайт больше не связан с игрой Steal a Vert1x.</p>
+      </div>
+      <div className="mt-3 rounded-2xl p-3.5 text-center" style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.1)'}}>
+        <p className="text-xs text-zinc-300 leading-relaxed">🛠 Обновление скоро выйдет. А пока, к сожалению, на сайте могут встречаться <b className="text-pink-200">баги</b>. Спасибо за понимание!</p>
+      </div>
+      <div className="flex flex-col gap-2 mt-5">
+        <a href="https://www.roblox.com/games/91480692330081/Steal-a-Sakura" target="_blank" rel="noopener noreferrer" className="btn rounded-xl py-3.5 text-center font-orbitron text-xs font-bold tracking-wider text-black" style={{background:'linear-gradient(90deg,#ec4899,#f9a8d4)',border:'1px solid rgba(251,207,232,.5)'}}>🎮 ПОСЕТИТЬ ИГРУ</a>
+        <button type="button" onClick={close} className="btn rounded-xl py-3 font-orbitron text-[10px] tracking-wider text-pink-200" style={{border:'1px solid rgba(244,114,182,.35)',background:'rgba(0,0,0,.35)'}}>ПОНЯТНО</button>
+      </div>
+    </div>
+  </div>
+}
 function App(){
   const [active,setActive]=useState('cases'),[account,setAccount]=useState(null),[balance,setBalance]=useState(1500),[inventory,setInventory]=useState(INIT),[deposit,setDeposit]=useState(false),[settings,setSettings]=useState(false),[user,setUser]=useState({name:'',id:'',avatar:'🐊',verified:false}),[role,setRole]=useState('player'),[loading,setLoading]=useState(true),[toast,setToast]=useState('');
   const saveT=useRef(null);
@@ -673,7 +699,7 @@ function App(){
     {toast&&<div className="fixed top-24 left-1/2 -translate-x-1/2 z-[70] glass rounded-xl px-4 py-3 text-[10px] font-orbitron text-pink-300">{toast}</div>}
   </G.Provider>;
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(<><App/><RebrandNotice/></>);
 </script>
 </body>
 </html>
